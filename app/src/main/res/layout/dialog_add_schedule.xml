@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="@drawable/bg_dialog_rounded">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="New Social Schedule"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Event name field -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:hint="Event name"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
+        app:boxCornerRadiusTopStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusBottomEnd="12dp"
+        app:boxStrokeColor="@color/primary"
+        app:hintTextColor="@color/text_secondary"
+        app:startIconDrawable="@android:drawable/ic_menu_edit"
+        app:startIconTint="@color/text_secondary">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_session_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textCapSentences"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Date row label -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="DATE"
+        android:textSize="10sp"
+        android:letterSpacing="0.1"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="6dp" />
+
+    <!-- Date picker button -->
+    <Button
+        android:id="@+id/btn_pick_date"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Select Date"
+        android:textColor="@color/text_primary"
+        android:layout_marginBottom="16dp"
+        app:icon="@android:drawable/ic_menu_today"
+        app:iconTint="@color/primary"
+        app:iconGravity="start"
+        app:strokeColor="@color/primary"
+        app:cornerRadius="12dp" />
+
+    <!-- Time row label -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TIME WINDOW"
+        android:textSize="10sp"
+        android:letterSpacing="0.1"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="6dp" />
+
+    <!-- Time pickers -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="12dp">
+
+        <Button
+            android:id="@+id/btn_pick_start"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:text="Start"
+            android:textColor="@color/text_primary"
+            app:icon="@android:drawable/ic_menu_recent_history"
+            app:iconTint="@color/primary"
+            app:iconGravity="start"
+            app:strokeColor="@color/primary"
+            app:cornerRadius="12dp" />
+
+        <Button
+            android:id="@+id/btn_pick_end"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:text="End"
+            android:textColor="@color/text_primary"
+            app:icon="@android:drawable/ic_menu_recent_history"
+            app:iconTint="@color/text_secondary"
+            app:iconGravity="start"
+            app:strokeColor="@color/primary"
+            app:cornerRadius="12dp" />
+    </LinearLayout>
+
+    <!-- Selected time summary -->
+    <TextView
+        android:id="@+id/tv_selected_time"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="13sp"
+        android:textColor="@color/primary"
+        android:gravity="center"
+        android:layout_marginBottom="4dp" />
+
+</LinearLayout>

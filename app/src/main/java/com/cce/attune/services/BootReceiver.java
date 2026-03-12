@@ -1,0 +1,23 @@
+package com.cce.attune.services;
+
+import android.util.Log;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+
+// Starts the MonitoringService when the device boots.
+
+public class BootReceiver extends BroadcastReceiver {
+    private static final String TAG = "BootReceiver";
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
+            Log.i(TAG, "Boot completed — starting MonitoringService & Worker");
+            MonitoringService.startService(context);
+            MonitoringWorker.startMonitoring(context);
+            Log.d(TAG, "Services started successfully");
+        }
+    }
+}
+

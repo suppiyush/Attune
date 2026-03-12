@@ -1,0 +1,316 @@
+package com.cce.attune.ui;
+
+import android.graphics.Color;
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+
+import com.cce.attune.R;
+import com.cce.attune.context.SocialContextManager;
+import com.cce.attune.databinding.FragmentDashboardBinding;
+import com.cce.attune.features.FeatureEngine;
+import com.cce.attune.features.PhubbingFeatures;
+import com.cce.attune.risk.PhubbingClassifier;
+import com.cce.attune.risk.RiskEngine;
+import com.cce.attune.telemetry.UsageStatsCollector;
+import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+public class DashboardFragment extends Fragment {
+
+    private FragmentDashboardBinding binding;
+
+    private FeatureEngine featureEngine;
+    private RiskEngine riskEngine;
+    private SocialContextManager contextManager;
+    private UsageStatsCollector statsCollector;
+
+    // Chart period
+    private int currentPeriod = 0;
+
+    // Prevent baseline drift
+    private long lastBaselineUpdate = 0;
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+
+        binding = FragmentDashboardBinding.inflate(inflater, container, false);
+        return binding.getRoot();
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view,
+                              @Nullable Bundle savedInstanceState) {
+
+        super.onViewCreated(view, savedInstanceState);
+
+        featureEngine = new FeatureEngine(requireContext());
+        riskEngine = new RiskEngine(requireContext());
+        contextManager = new SocialContextManager(requireContext());
+        statsCollector = new UsageStatsCollector(requireContext());
+
+        setupPeriodButtons();
+        setupChart();
+        refreshData();
+    }
+
+    private void setupPeriodButtons() {
+
+        binding.btnDaily.setOnClickListener(v -> selectPeriod(0));
+        binding.btnWeekly.setOnClickListener(v -> selectPeriod(1));
+        binding.btnMonthly.setOnClickListener(v -> selectPeriod(2));
+
+    }
+
+    private void selectPeriod(int period) {
+
+        currentPeriod = period;
+
+        int active = requireContext().getColor(R.color.primary);
+        int inactive = requireContext().getColor(R.color.text_secondary);
+
+        binding.btnDaily.setTextColor(period == 0 ? active : inactive);
+        binding.btnWeekly.setTextColor(period == 1 ? active : inactive);
+        binding.btnMonthly.setTextColor(period == 2 ? active : inactive);
+
+        refreshChart();
+    }
+
+    private void refreshData() {
+
+        long now = System.currentTimeMillis();
+
+        // Extract behavioral features
+        PhubbingFeatures features = featureEngine.extractFeatures();
+
+        // AI score (stub 0.5 when model absent)
+        PhubbingClassifier classifier = new PhubbingClassifier(requireContext());
+        float aiScore = classifier.predict(features);
+        classifier.close();
+
+        // Compute hybrid risk
+        float risk = riskEngine.computeRisk(features, aiScore);
+
+        // Detect social context
+        boolean inSocial = contextManager.isSocialWindowActive(now);
+
+        // Update baseline only once per hour
+        if (!inSocial && now - lastBaselineUpdate > 3_600_000L) {
+            riskEngine.updateBaseline(features);
+            lastBaselineUpdate = now;
+        }
+
+        // Display risk score
+        int riskPct = Math.round(risk * 100);
+
+        binding.tvRiskScore.setText(riskPct + "%");
+        binding.tvRiskLabel.setText(RiskEngine.riskLabel(risk));
+
+        int riskColor;
+
+        if (risk < 0.3f)
+            riskColor = requireContext().getColor(R.color.risk_low);
+        else if (risk < 0.6f)
+            riskColor = requireContext().getColor(R.color.risk_medium);
+        else
+            riskColor = requireContext().getColor(R.color.risk_high);
+
+        binding.tvRiskScore.setTextColor(riskColor);
+        binding.tvRiskLabel.setTextColor(riskColor);
+
+        // Optional explanation text
+        if (binding.tvRiskExplanation != null) {
+            binding.tvRiskExplanation.setText(riskEngine.explainRisk(risk));
+        }
+
+        // Social context indicator
+        binding.tvSocialContext.setText(
+                inSocial ? "● Social session active"
+                        : "○ No active social session"
+        );
+
+        binding.tvSocialContext.setTextColor(
+                inSocial
+                        ? requireContext().getColor(R.color.accent)
+                        : requireContext().getColor(R.color.text_tertiary)
+        );
+
+        // Last hour screen time
+        long fromMs = now - 3_600_000L;
+
+        long screenTimeSec =
+                statsCollector.getTotalScreenTimeSeconds(fromMs, now);
+
+        binding.tvScreenTime.setText((screenTimeSec / 60) + " min");
+
+        // Unlock rate
+        float unlockRate = features.unlockRate;
+
+        binding.tvUnlockRate.setText(
+                String.format(Locale.getDefault(), "%.0f/hr", unlockRate)
+        );
+
+        float baselineUnlock = riskEngine.getBaselineUnlockRate();
+
+        binding.tvUnlockBaseline.setText(
+                String.format(Locale.getDefault(),
+                        "baseline: %.0f/hr", baselineUnlock)
+        );
+
+        // Switch rate
+        float switchRate = features.switchRate;
+
+        binding.tvSwitchRate.setText(
+                String.format(Locale.getDefault(), "%.0f/hr", switchRate)
+        );
+
+        float baselineSwitch = riskEngine.getBaselineSwitchRate();
+
+        binding.tvSwitchBaseline.setText(
+                String.format(Locale.getDefault(),
+                        "baseline: %.0f/hr", baselineSwitch)
+        );
+
+        // Notification reaction time
+        float notifReact = features.notificationReactionSeconds;
+
+        binding.tvNotifRate.setText(
+                notifReact > 600
+                        ? "slow"
+                        : String.format(Locale.getDefault(),
+                        "%.0f sec", notifReact)
+        );
+
+        // Social screen time indicator
+        binding.tvScreenTimeSocial.setText(
+                inSocial ? "in social now" : "no active session"
+        );
+
+        refreshChart();
+    }
+
+    private void setupChart() {
+
+        LineChart chart = binding.barChart;
+
+        chart.setDrawGridBackground(false);
+        chart.getDescription().setEnabled(false);
+        chart.setPinchZoom(false);
+        chart.setBackgroundColor(Color.TRANSPARENT);
+        chart.getLegend().setEnabled(false);
+        chart.setTouchEnabled(true);
+
+        chart.getAxisRight().setEnabled(false);
+
+        chart.getAxisLeft().setTextColor(Color.parseColor("#B0B3C6"));
+        chart.getAxisLeft().setGridColor(Color.parseColor("#1F2A4A"));
+        chart.getAxisLeft().setAxisLineColor(Color.TRANSPARENT);
+        chart.getAxisLeft().setAxisMinimum(0f);
+
+        chart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
+        chart.getXAxis().setTextColor(Color.parseColor("#B0B3C6"));
+        chart.getXAxis().setGridColor(Color.TRANSPARENT);
+        chart.getXAxis().setDrawAxisLine(false);
+        chart.getXAxis().setGranularity(1f);
+    }
+
+    private void refreshChart() {
+
+        long now = System.currentTimeMillis();
+        String[] labels;
+
+        List<Entry> socialEntries   = new ArrayList<>();
+        List<Entry> baselineEntries = new ArrayList<>();
+
+        switch (currentPeriod) {
+
+            case 1: // Weekly — one point per day (7 points)
+                labels = new String[]{"Mon","Tue","Wed","Thu","Fri","Sat","Sun"};
+                for (int i = 0; i < 7; i++) {
+                    long to   = now - (6 - i) * 86_400_000L;
+                    long from = to  - 86_400_000L;
+                    socialEntries  .add(new Entry(i, statsCollector.getUnlockCount(from, to)));
+                    baselineEntries.add(new Entry(i, riskEngine.getBaselineUnlockRate()));
+                }
+                break;
+
+            case 2: // Monthly — one point per week (4 points)
+                labels = new String[]{"Week 1","Week 2","Week 3","Week 4"};
+                for (int i = 0; i < 4; i++) {
+                    long weekMs = 7 * 86_400_000L;
+                    long to     = now - (3 - i) * weekMs;
+                    long from   = to  - weekMs;
+                    socialEntries  .add(new Entry(i, statsCollector.getUnlockCount(from, to)));
+                    baselineEntries.add(new Entry(i, riskEngine.getBaselineUnlockRate() * 7));
+                }
+                break;
+
+            default: // Daily — one point per hour for last 5 hours
+                labels = new String[]{"4h ago","3h ago","2h ago","1h ago","Now"};
+                for (int i = 0; i < 5; i++) {
+                    long to   = now - (4 - i) * 3_600_000L;
+                    long from = to  - 3_600_000L;
+                    socialEntries  .add(new Entry(i, statsCollector.getUnlockCount(from, to)));
+                    baselineEntries.add(new Entry(i, riskEngine.getBaselineUnlockRate()));
+                }
+                break;
+        }
+
+        // Unlock rate line
+        LineDataSet socialSet = new LineDataSet(socialEntries, "Unlock Rate");
+        socialSet.setColor(Color.parseColor("#6C63FF"));
+        socialSet.setLineWidth(2.5f);
+        socialSet.setCircleRadius(3f);
+        socialSet.setCircleColor(Color.parseColor("#6C63FF"));
+        socialSet.setDrawCircleHole(false);
+        socialSet.setDrawValues(false);
+        socialSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
+        socialSet.setDrawFilled(true);
+        socialSet.setFillColor(Color.parseColor("#6C63FF"));
+        socialSet.setFillAlpha(40);
+
+        // Baseline line
+        LineDataSet baselineSet = new LineDataSet(baselineEntries, "Baseline");
+        baselineSet.setColor(Color.parseColor("#2D3561"));
+        baselineSet.setLineWidth(1.5f);
+        baselineSet.setDrawCircles(false);
+        baselineSet.setDrawValues(false);
+        baselineSet.enableDashedLine(10f, 5f, 0f);
+        baselineSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
+
+        LineChart chart = binding.barChart;
+        chart.getXAxis().setValueFormatter(new IndexAxisValueFormatter(labels));
+        chart.getXAxis().setLabelCount(labels.length);
+        chart.setData(new LineData(baselineSet, socialSet));
+        chart.setVisibleXRangeMaximum(labels.length);
+        chart.invalidate();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        refreshData();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
+    }
+}

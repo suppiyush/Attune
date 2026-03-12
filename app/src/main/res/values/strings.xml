@@ -1,3 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Attune</string>
+    <string name="loading">Loading…</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Tell us about you</string>
+    <string name="onboarding_subtitle">This stays on your device and is only used to personalize your profile.</string>
+    <string name="hint_name">Name</string>
+    <string name="hint_age">Age</string>
+    <string name="label_gender">Gender</string>
+    <string name="continue_text">Continue</string>
+    <string name="onboarding_privacy">You can update this anytime from Profile.</string>
+
+    <!-- Bottom Nav -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_schedule">Schedule</string>
+    <string name="nav_info">Info</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Dashboard -->
+    <string name="title_dashboard">Your Presence Report</string>
+    <string name="label_daily">Daily</string>
+    <string name="label_weekly">Weekly</string>
+    <string name="label_monthly">Monthly</string>
+    <string name="label_screen_time">Screen Time</string>
+    <string name="label_unlock_rate">Unlock Rate</string>
+    <string name="label_notification_rate">Notification Checks</string>
+    <string name="label_app_switching">App Switching</string>
+    <string name="label_social_phubbing">During Social</string>
+    <string name="label_baseline">Baseline</string>
+    <string name="unit_min">min</string>
+    <string name="unit_per_hr">/hr</string>
+    <string name="phubbing_risk">Phubbing Risk</string>
+
+    <!-- Schedule -->
+    <string name="title_schedule">Social Schedule</string>
+    <string name="add_schedule">Add Schedule</string>
+    <string name="schedule_name_hint">Event name (e.g. Dinner)</string>
+    <string name="schedule_date">Date</string>
+    <string name="schedule_start">Start Time</string>
+    <string name="schedule_end">End Time</string>
+    <string name="no_schedules">No schedules yet. Tap + to add one.</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+
+    <!-- Profile -->
+    <string name="title_profile">Profile &amp; Settings</string>
+    <string name="social_bt_groups">Social Bluetooth Groups</string>
+    <string name="social_bt_groups_desc">If ALL devices in a group appear in a Bluetooth scan, it counts as a social interaction</string>
+    <string name="btn_new_group">+ New Group</string>
+    <string name="btn_add_devices">+ Add Devices</string>
+    <string name="picker_title">Add Devices to Group</string>
+    <string name="picker_hint">Device name (e.g. John&#8217;s Phone)</string>
+    <string name="about_title">About Attune</string>
+    <string name="about_text">A behavioral awareness app to help you stay present during social interactions. All data stays on your device.</string>
+    <string name="news_title">Research &amp; Articles</string>
+    <string name="news_item_1">The Social Cost of Smartphone Use — Smartphones reduce conversation quality by 20%</string>
+    <string name="news_item_2">Phubbing and Relationship Satisfaction — How phone snubbing affects personal relationships</string>
+    <string name="news_item_3">Digital Mindfulness — Practical techniques to reduce phubbing behavior</string>
+    <string name="permission_required">Usage Access Required</string>
+    <string name="permission_message">Attune needs Usage Access permission to track app usage. Please enable it in Settings.</string>
+    <string name="go_to_settings">Go to Settings</string>
+    <string name="version">Version 1.0</string>
 </resources>

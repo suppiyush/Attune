@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/nav_dashboard">
+
+    <fragment
+        android:id="@+id/nav_onboarding"
+        android:name="com.cce.attune.ui.OnboardingFragment"
+        android:label="Onboarding">
+        <action
+            android:id="@+id/action_onboarding_to_dashboard"
+            app:destination="@id/nav_dashboard"
+            app:popUpTo="@id/nav_onboarding"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_dashboard"
+        android:name="com.cce.attune.ui.DashboardFragment"
+        android:label="@string/nav_dashboard" />
+
+    <fragment
+        android:id="@+id/nav_schedule"
+        android:name="com.cce.attune.ui.ScheduleFragment"
+        android:label="@string/nav_schedule" />
+
+    <fragment
+        android:id="@+id/nav_info"
+        android:name="com.cce.attune.ui.InfoFragment"
+        android:label="@string/nav_info" />
+
+    <fragment
+        android:id="@+id/nav_profile"
+        android:name="com.cce.attune.ui.ProfileFragment"
+        android:label="@string/nav_profile" />
+
+</navigation>

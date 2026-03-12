@@ -1,5 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Brand / Accent -->
+    <!-- Accent orange used for highlights -->
+    <color name="primary">#FF6A2E</color>
+    <color name="primary_dark">#E85A23</color>
+    <color name="accent">#FF6A2E</color>
+    <color name="accent_dark">#E85A23</color>
+
+    <!-- Brand gradient (header background) -->
+    <color name="brand_grad_start">#E6B386</color>
+    <color name="brand_grad_end">#F3C9A3</color>
+
+    <!-- Backgrounds -->
+    <!-- Main app background (very light neutral gray) -->
+    <color name="bg_dark">#F2F2F7</color>
+    <!-- Surfaces / toolbars / containers -->
+    <color name="bg_surface">#FFFFFF</color>
+    <!-- Cards -->
+    <color name="bg_card">#FFFFFF</color>
+    <color name="bg_card_elevated">#F7F7F9</color>
+
+    <!-- Text -->
+    <color name="text_primary">#1C1C1E</color>
+    <color name="text_secondary">#6E6E73</color>
+    <color name="text_tertiary">#A1A1A6</color>
+    <color name="icon_muted">#8E8E93</color>
+
+    <!-- Risk colors -->
+    <color name="risk_low">#34C759</color>
+    <color name="risk_medium">#FFCC00</color>
+    <color name="risk_high">#FF3B30</color>
+
+    <!-- Chart bars -->
+    <color name="bar_social">#FF6A2E</color>
+    <color name="bar_baseline">#D1D1D6</color>
+
+    <!-- System -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="divider">#E5E5EA</color>
 </resources>
