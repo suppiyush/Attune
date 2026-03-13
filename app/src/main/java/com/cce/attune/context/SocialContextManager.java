@@ -25,16 +25,14 @@ import java.util.Set;
 public class SocialContextManager {
 
     private static final String TAG = "SocialContextManager";
-
-    /** SharedPreferences file written by MonitoringService during BT discovery. */
     public static final String BT_PREFS        = "bt_scan_prefs";
-    /** Key holding a Set<String> of MAC addresses seen in the last BT scan. */
     public static final String KEY_BT_SEEN     = "bt_seen_devices";
 
     private final SocialSessionDao sessionDao;
     private final SsidGroupDao     groupDao;
 
     public SocialContextManager(Context context) {
+        this.context = context;
         AppDatabase db = AppDatabase.getInstance(context);
         this.sessionDao = db.socialSessionDao();
         this.groupDao   = db.ssidGroupDao();
@@ -48,6 +46,7 @@ public class SocialContextManager {
                 Log.d(TAG, "Active social session: " + active.name);
                 return true;
             }
+            Log.d(TAG, "No scheduled session found");
         } catch (Exception e) {
             Log.e(TAG, "Error checking social window", e);
         }
@@ -55,15 +54,21 @@ public class SocialContextManager {
     }
 
     public List<SocialSession> getAllSessions()          { return sessionDao.getAllSessions(); }
-    public void addSession(SocialSession session)        { sessionDao.insert(session); }
-    public void deleteSession(int sessionId)             { sessionDao.deleteById(sessionId); }
+    public void addSession(SocialSession session) {
+        sessionDao.insert(session);
+        // Refresh alarms
+        ScheduleAlarmManager.rescheduleAllAlarms(context);
+        com.cce.attune.services.MonitoringService.startService(context);
+    }
 
-    // ── Bluetooth group detection ─────────────────────────────────────────────
+    private final Context context;
 
-    /**
-     * Returns true if at least 2 devices from any configured Bluetooth group
-     * are present in the most recent BT scan cache stored by MonitoringService.
-     */
+    public void deleteSession(int sessionId) {
+        ScheduleAlarmManager.cancelSessionAlarms(context, sessionId);
+        sessionDao.deleteById(sessionId);
+        com.cce.attune.services.MonitoringService.startService(context);
+    }
+
     public boolean isBluetoothGroupActive(Context context) {
         try {
             List<SsidGroup> groups = groupDao.getAllGroups();
@@ -74,7 +79,7 @@ public class SocialContextManager {
             Set<String> seenMacs = prefs.getStringSet(KEY_BT_SEEN, new HashSet<>());
             if (seenMacs.isEmpty()) return false;
 
-            // Normalise to upper-case for comparison
+            // Normalize to upper-case for comparison
             Set<String> seenUpper = new HashSet<>();
             for (String mac : seenMacs) seenUpper.add(mac.toUpperCase());
 

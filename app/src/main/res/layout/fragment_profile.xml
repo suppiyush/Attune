@@ -10,7 +10,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="48dp"
+        android:paddingBottom="0dp">
 
         <!-- Page heading -->
         <TextView
@@ -207,6 +210,128 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
         </LinearLayout>
+
+        <!-- Activity Grid row -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ACTIVITY"
+            android:textSize="11sp"
+            android:textColor="@color/text_secondary"
+            android:letterSpacing="0.1"
+            android:layout_marginBottom="8dp" />
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="@color/bg_card"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
+
+                    <!-- Previous Month -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:id="@+id/tv_month_prev"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Month 1"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_secondary"
+                            android:layout_marginBottom="8dp"/>
+
+                        <GridLayout
+                            android:id="@+id/grid_streak_prev"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:columnCount="7"
+                            android:useDefaultMargins="true" />
+                    </LinearLayout>
+
+                    <!-- Current Month -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:id="@+id/tv_month_curr"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Month 2"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_secondary"
+                            android:layout_marginBottom="8dp"/>
+
+                        <GridLayout
+                            android:id="@+id/grid_streak_curr"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:columnCount="7"
+                            android:useDefaultMargins="true" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_gravity="end"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Phubbing"
+                        android:textSize="10sp"
+                        android:textColor="@color/text_tertiary" />
+
+                    <View
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:layout_marginStart="4dp"
+                        android:background="@drawable/streak_box_base" />
+
+                    <View
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:layout_marginStart="12dp"
+                        android:background="@drawable/streak_box_base"
+                        android:backgroundTint="@color/primary" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Clean"
+                        android:layout_marginStart="4dp"
+                        android:textSize="10sp"
+                        android:textColor="@color/text_tertiary" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
         <!-- Settings section -->
         <TextView

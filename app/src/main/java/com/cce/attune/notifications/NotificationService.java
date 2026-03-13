@@ -26,7 +26,7 @@ public class NotificationService {
     public  static final int   NOTIFICATION_ID = 2001;
 
     private static final String[] MINDFUL_MESSAGES = {
-            "You've been checking your phone a lot — take a moment to reconnect.",
+            "You've been checking your phone a lot, take a moment to reconnect.",
             "Those around you will remember your presence more than your posts.",
             "Look up. The real world is worth your attention.",
             "Your phone can wait. The person beside you cannot.",
@@ -41,6 +41,9 @@ public class NotificationService {
      * @param features  feature snapshot used for feedback weight adaptation
      */
     public static void sendPhubbingAlert(Context context, float riskScore, PhubbingFeatures features) {
+        if (!new com.cce.attune.context.SettingsManager(context).isMonitoringEnabled()) {
+            return;
+        }
         createChannel(context);
 
         // Persist a FeedbackEvent row (wasCorrect = null until user taps)

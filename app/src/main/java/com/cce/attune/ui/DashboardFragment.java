@@ -2,6 +2,7 @@ package com.cce.attune.ui;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +18,7 @@ import com.cce.attune.features.FeatureEngine;
 import com.cce.attune.features.PhubbingFeatures;
 import com.cce.attune.risk.PhubbingClassifier;
 import com.cce.attune.risk.RiskEngine;
+import com.cce.attune.risk.StrictnessManager;
 import com.cce.attune.telemetry.UsageStatsCollector;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.XAxis;
@@ -25,6 +27,8 @@ import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
 
+import android.os.Handler;
+import android.os.Looper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -43,6 +47,15 @@ public class DashboardFragment extends Fragment {
 
     // Prevent baseline drift
     private long lastBaselineUpdate = 0;
+
+    private final Handler refreshHandler = new Handler(Looper.getMainLooper());
+    private final Runnable refreshRunnable = new Runnable() {
+        @Override
+        public void run() {
+            refreshData();
+            refreshHandler.postDelayed(this, 30_000); // 30 seconds
+        }
+    };
 
     @Nullable
     @Override
@@ -67,7 +80,21 @@ public class DashboardFragment extends Fragment {
 
         setupPeriodButtons();
         setupChart();
+        setupRefreshLayout();
         refreshData();
+    }
+
+    private void setupRefreshLayout() {
+        binding.refreshLayout.setOnRefreshListener(() -> {
+            refreshData();
+            binding.refreshLayout.setRefreshing(false);
+        });
+
+        // Optional: Customize refresh indicator colors
+        binding.refreshLayout.setColorSchemeResources(
+                R.color.primary,
+                R.color.accent
+        );
     }
 
     private void setupPeriodButtons() {
@@ -93,6 +120,7 @@ public class DashboardFragment extends Fragment {
     }
 
     private void refreshData() {
+        Log.d("Look here", "Refreshing Data");
 
         long now = System.currentTimeMillis();
 
@@ -222,6 +250,7 @@ public class DashboardFragment extends Fragment {
         chart.getAxisLeft().setGridColor(Color.parseColor("#1F2A4A"));
         chart.getAxisLeft().setAxisLineColor(Color.TRANSPARENT);
         chart.getAxisLeft().setAxisMinimum(0f);
+        chart.getAxisLeft().setAxisMaximum(100f);
 
         chart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
         chart.getXAxis().setTextColor(Color.parseColor("#B0B3C6"));
@@ -245,8 +274,10 @@ public class DashboardFragment extends Fragment {
                 for (int i = 0; i < 7; i++) {
                     long to   = now - (6 - i) * 86_400_000L;
                     long from = to  - 86_400_000L;
-                    socialEntries  .add(new Entry(i, statsCollector.getUnlockCount(from, to)));
-                    baselineEntries.add(new Entry(i, riskEngine.getBaselineUnlockRate()));
+                    PhubbingFeatures features = featureEngine.extractFeaturesForPeriod(from, to);
+                    float risk = riskEngine.computeRisk(features, 0.5f) * 100f;
+                    socialEntries.add(new Entry(i, risk));
+                    baselineEntries.add(new Entry(i, new StrictnessManager(requireContext()).getThreshold() * 100f));
                 }
                 break;
 
@@ -256,8 +287,10 @@ public class DashboardFragment extends Fragment {
                     long weekMs = 7 * 86_400_000L;
                     long to     = now - (3 - i) * weekMs;
                     long from   = to  - weekMs;
-                    socialEntries  .add(new Entry(i, statsCollector.getUnlockCount(from, to)));
-                    baselineEntries.add(new Entry(i, riskEngine.getBaselineUnlockRate() * 7));
+                    PhubbingFeatures features = featureEngine.extractFeaturesForPeriod(from, to);
+                    float risk = riskEngine.computeRisk(features, 0.5f) * 100f;
+                    socialEntries.add(new Entry(i, risk));
+                    baselineEntries.add(new Entry(i, new StrictnessManager(requireContext()).getThreshold() * 100f));
                 }
                 break;
 
@@ -266,33 +299,35 @@ public class DashboardFragment extends Fragment {
                 for (int i = 0; i < 5; i++) {
                     long to   = now - (4 - i) * 3_600_000L;
                     long from = to  - 3_600_000L;
-                    socialEntries  .add(new Entry(i, statsCollector.getUnlockCount(from, to)));
-                    baselineEntries.add(new Entry(i, riskEngine.getBaselineUnlockRate()));
+                    PhubbingFeatures features = featureEngine.extractFeaturesForPeriod(from, to);
+                    float risk = riskEngine.computeRisk(features, 0.5f) * 100f;
+                    socialEntries.add(new Entry(i, risk));
+                    baselineEntries.add(new Entry(i, new StrictnessManager(requireContext()).getThreshold() * 100f));
                 }
                 break;
         }
 
-        // Unlock rate line
-        LineDataSet socialSet = new LineDataSet(socialEntries, "Unlock Rate");
-        socialSet.setColor(Color.parseColor("#6C63FF"));
+        // Risk Score line
+        LineDataSet socialSet = new LineDataSet(socialEntries, "Risk Score");
+        socialSet.setColor(requireContext().getColor(R.color.bar_social));
         socialSet.setLineWidth(2.5f);
         socialSet.setCircleRadius(3f);
-        socialSet.setCircleColor(Color.parseColor("#6C63FF"));
+        socialSet.setCircleColor(requireContext().getColor(R.color.bar_social));
         socialSet.setDrawCircleHole(false);
         socialSet.setDrawValues(false);
-        socialSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
+        socialSet.setMode(LineDataSet.Mode.LINEAR);
         socialSet.setDrawFilled(true);
-        socialSet.setFillColor(Color.parseColor("#6C63FF"));
+        socialSet.setFillColor(requireContext().getColor(R.color.bar_social));
         socialSet.setFillAlpha(40);
 
-        // Baseline line
-        LineDataSet baselineSet = new LineDataSet(baselineEntries, "Baseline");
-        baselineSet.setColor(Color.parseColor("#2D3561"));
+        // Threshold line
+        LineDataSet baselineSet = new LineDataSet(baselineEntries, "Threshold");
+        baselineSet.setColor(requireContext().getColor(R.color.bar_baseline));
         baselineSet.setLineWidth(1.5f);
         baselineSet.setDrawCircles(false);
         baselineSet.setDrawValues(false);
         baselineSet.enableDashedLine(10f, 5f, 0f);
-        baselineSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
+        baselineSet.setMode(LineDataSet.Mode.LINEAR);
 
         LineChart chart = binding.barChart;
         chart.getXAxis().setValueFormatter(new IndexAxisValueFormatter(labels));
@@ -306,6 +341,13 @@ public class DashboardFragment extends Fragment {
     public void onResume() {
         super.onResume();
         refreshData();
+        refreshHandler.post(refreshRunnable);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        refreshHandler.removeCallbacks(refreshRunnable);
     }
 
     @Override

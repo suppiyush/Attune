@@ -13,13 +13,14 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
-import android.os.Looper;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
 import com.cce.attune.R;
+import com.cce.attune.context.SettingsManager;
 import com.cce.attune.context.SocialContextManager;
 import com.cce.attune.features.FeatureEngine;
 import com.cce.attune.features.PhubbingFeatures;
@@ -33,223 +34,440 @@ import com.cce.attune.ui.MainActivity;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Foreground service that keeps the app alive in the background.
- *
- * <p>Two periodic loops run inside a single Handler:</p>
- * <ul>
- *   <li>BT discovery  — refreshes the nearby-device cache every BT_SCAN_INTERVAL_MS.</li>
- *   <li>Phubbing check — evaluates social context and phubbing risk every CHECK_INTERVAL_MS.</li>
- * </ul>
- * Both loops start immediately when the service starts, so the first run happens at launch.
- */
 public class MonitoringService extends Service {
 
-    public static final String CHANNEL_ID   = "monitoring_service_channel";
+    public static final String CHANNEL_ID = "monitoring_service_channel";
     private static final int NOTIFICATION_ID = 1001;
-    private static final String TAG          = "MonitoringService";
+    private static final String TAG = "MonitoringService";
+    private static final String SUMMARY_PREFS = "daily_summary_prefs";
+    private static final String KEY_TODAY_DATE = "today_date";
+    private static final String KEY_RISK_SUM = "risk_sum";
+    private static final String KEY_RISK_COUNT = "risk_count";
+    private static final String KEY_SESSIONS_COUNT = "sessions_count";
 
-    // ── Intervals ──────────────────────────────────────────────────────────
-    private static final long BT_SCAN_INTERVAL_MS = 1 * 60 * 1000L;  // 1 minute
-    private static final long CHECK_INTERVAL_MS   = 2 * 60 * 1000L;  // 2 minutes
+    private static final long BT_SCAN_INTERVAL_MS = 60 * 1000L;
+    private static final long CHECK_INTERVAL_MS = 1 * 60 * 1000L;
 
-    private UnlockReceiver      unlockReceiver;
-    private BroadcastReceiver   btDiscoveryReceiver;
-    private final Handler       handler         = new Handler(Looper.getMainLooper());
-    private final Set<String>   currentScanMacs = new HashSet<>();
+    private UnlockReceiver unlockReceiver;
+    private BroadcastReceiver btDiscoveryReceiver;
 
-    /** Loaded once in onCreate() and reused across every check cycle. */
-    private PhubbingClassifier  classifier;
+    private HandlerThread monitoringThread;
+    private Handler handler;
 
-    // ── BT scan loop ───────────────────────────────────────────────────────
+    private final Set<String> currentScanMacs = new HashSet<>();
+
+    private boolean monitoringStarted = false;
+    private boolean isScheduleActive = false;
+
+    private PhubbingClassifier classifier;
 
     private final Runnable btScanRunnable = new Runnable() {
-        @Override public void run() {
-            startBluetoothDiscovery();
+        @Override
+        public void run() {
+            if (!new SettingsManager(MonitoringService.this).isMonitoringEnabled()) {
+                Log.d(TAG, "Monitoring disabled, stopping self");
+                stopSelf();
+                return;
+            }
+
+            if (new SettingsManager(MonitoringService.this).isBluetoothSocialDetectionEnabled()) {
+                startBluetoothDiscovery();
+            } else {
+                Log.d(TAG, "BT scanning disabled in settings");
+            }
             handler.postDelayed(this, BT_SCAN_INTERVAL_MS);
         }
     };
 
-    // ── Phubbing evaluation loop ───────────────────────────────────────────
-
     private final Runnable phubbingCheckRunnable = new Runnable() {
-        @Override public void run() {
+        @Override
+        public void run() {
+            if (!new SettingsManager(MonitoringService.this).isMonitoringEnabled()) {
+                Log.d(TAG, "Monitoring disabled, stopping self");
+                stopSelf();
+                return;
+            }
             runPhubbingCheck();
             handler.postDelayed(this, CHECK_INTERVAL_MS);
         }
     };
 
     private void runPhubbingCheck() {
+        if (!new SettingsManager(this).isPhubbingAlertsEnabled()) {
+            Log.d(TAG, "Phubbing alerts disabled in settings; skipping check");
+            return;
+        }
+
         try {
-            SocialContextManager cm = new SocialContextManager(MonitoringService.this);
+
+            SocialContextManager cm = new SocialContextManager(this);
+
             boolean inSocialContext =
-                    cm.isSocialWindowActive(System.currentTimeMillis())
-                    || cm.isBluetoothGroupActive(MonitoringService.this);
+                    isScheduleActive
+                            || cm.isBluetoothGroupActive(this);
 
             Log.d(TAG, "Phubbing check — social context: " + inSocialContext);
+            Log.d(TAG, "Schedule Active: " + isScheduleActive);
 
-            // NOTE: social context gate is bypassed during testing so the full
-            // pipeline always runs. Re-enable the early-return after testing:
-            // if (!inSocialContext) return;
 
-            FeatureEngine    featureEngine = new FeatureEngine(MonitoringService.this);
-            PhubbingFeatures features      = featureEngine.extractFeatures();
+            FeatureEngine featureEngine = new FeatureEngine(this);
+            PhubbingFeatures features = featureEngine.extractFeatures();
 
-            // AI score from TFLite (0.5 stub when model absent)
-            float aiScore = classifier != null ? classifier.predict(features) : 0.5f;
+            float aiScore = classifier != null
+                    ? classifier.predict(features)
+                    : 0f;
 
-            RiskEngine riskEngine = new RiskEngine(MonitoringService.this);
-            float risk            = riskEngine.computeRisk(features, aiScore);
+            RiskEngine riskEngine = new RiskEngine(this);
 
-            // Update personal baseline after each observation
+            float risk = riskEngine.computeRisk(features, aiScore);
+
             riskEngine.updateBaseline(features);
 
-            // Strictness-aware threshold
-            float threshold = new StrictnessManager(MonitoringService.this).getThreshold();
+            float threshold =
+                    new StrictnessManager(this).getThreshold();
 
-            Log.d(TAG, "Risk=" + risk + " | threshold=" + threshold
-                    + " | ai=" + aiScore + " | social=" + inSocialContext);
+            updateDailyMetrics(risk, inSocialContext);
+            updateStreakStatus(risk, threshold);
 
-            if (risk >= threshold) {
-                NotificationService.sendPhubbingAlert(MonitoringService.this, risk, features);
-                Log.d(TAG, "Alert sent!");
+            if (inSocialContext && risk >= 0) {
+
+                NotificationService.sendPhubbingAlert(
+                        this,
+                        risk,
+                        features
+                );
+
+                Log.d(TAG, "Alert sent");
+
             }
+
         } catch (Exception e) {
+
             Log.e(TAG, "Phubbing check failed", e);
+
         }
     }
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
-
     @Override
     public void onCreate() {
+
         super.onCreate();
+
+        monitoringThread = new HandlerThread("MonitoringThread");
+        monitoringThread.start();
+
+        handler = new Handler(monitoringThread.getLooper());
+
         classifier = new PhubbingClassifier(this);
+
         createNotificationChannel();
-        registerUnlockReceiver();
+
         registerBtDiscoveryReceiver();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startForeground(NOTIFICATION_ID, buildForegroundNotification());
-        // Both loops start immediately — no initial delay
-        handler.post(btScanRunnable);
-        handler.post(phubbingCheckRunnable);
+
+        if (!new SettingsManager(this).isMonitoringEnabled()) {
+            Log.d(TAG, "Monitoring disabled, stopping service");
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        int type = 0;
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            type |= android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
+        }
+
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED &&
+                androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_SCAN) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                type |= android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
+            }
+        } else if (android.os.Build.VERSION.SDK_INT >= 29) {
+            type |= android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
+        }
+
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                startForeground(NOTIFICATION_ID, buildForegroundNotification(), type);
+            } else {
+                startForeground(NOTIFICATION_ID, buildForegroundNotification());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start foreground", e);
+        }
+
+        if (!monitoringStarted) {
+
+            monitoringStarted = true;
+
+            handler.post(btScanRunnable);
+            handler.post(phubbingCheckRunnable);
+
+            Log.d(TAG, "Monitoring loops started");
+
+        }
+
+        // Re-evaluate schedule state synchronously against the database
+        // This ensures deleting an active schedule instantly updates the service state
+        SocialContextManager cm = new SocialContextManager(this);
+        isScheduleActive = cm.isSocialWindowActive(System.currentTimeMillis());
+        
+        if (intent != null && intent.getAction() != null) {
+            Log.d(TAG, "Action received: " + intent.getAction() + " | isScheduleActive=" + isScheduleActive);
+        }
+
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
+
         super.onDestroy();
+
         handler.removeCallbacks(btScanRunnable);
         handler.removeCallbacks(phubbingCheckRunnable);
-        if (unlockReceiver != null)      unregisterReceiver(unlockReceiver);
-        if (btDiscoveryReceiver != null) unregisterReceiver(btDiscoveryReceiver);
+
+        if (btDiscoveryReceiver != null)
+            unregisterReceiver(btDiscoveryReceiver);
+
         stopBluetoothDiscovery();
-        if (classifier != null)          classifier.close();
+
+        if (classifier != null)
+            classifier.close();
+
+        if (monitoringThread != null)
+            monitoringThread.quitSafely();
     }
 
     @Override
-    public IBinder onBind(Intent intent) { return null; }
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 
-    // ── Bluetooth discovery ───────────────────────────────────────────────────
 
     private void registerBtDiscoveryReceiver() {
+
         btDiscoveryReceiver = new BroadcastReceiver() {
+
             @Override
             public void onReceive(Context ctx, Intent intent) {
+
                 String action = intent.getAction();
+
                 if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+
+                    BluetoothDevice device =
+                            intent.getParcelableExtra(
+                                    BluetoothDevice.EXTRA_DEVICE);
+
                     if (device != null) {
+
                         try {
-                            currentScanMacs.add(device.getAddress());
-                            Log.d(TAG, "BT found: " + device.getAddress()
-                                    + " (" + device.getName() + ")");
+
+                            currentScanMacs.add(
+                                    device.getAddress());
+
+                            Log.d(TAG,
+                                    "BT found: "
+                                            + device.getAddress());
+
                         } catch (SecurityException e) {
-                            Log.w(TAG, "BT permission denied reading device");
+
+                            Log.w(TAG,
+                                    "BT permission denied");
+
                         }
+
                     }
-                } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
+
+                } else if (
+                        BluetoothAdapter.ACTION_DISCOVERY_FINISHED
+                                .equals(action)) {
+
                     persistSeenMacs(currentScanMacs);
-                    Log.d(TAG, "BT discovery finished — " + currentScanMacs.size() + " devices cached");
+
+                    Log.d(TAG,
+                            "BT discovery finished — "
+                                    + currentScanMacs.size());
+
                 }
             }
         };
 
         IntentFilter filter = new IntentFilter();
+
         filter.addAction(BluetoothDevice.ACTION_FOUND);
-        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        filter.addAction(
+                BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+
         registerReceiver(btDiscoveryReceiver, filter);
     }
 
     private void startBluetoothDiscovery() {
+
         try {
-            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+
+            BluetoothAdapter adapter =
+                    BluetoothAdapter.getDefaultAdapter();
+
             if (adapter == null || !adapter.isEnabled()) {
-                Log.d(TAG, "BT off or unavailable — skipping discovery");
+
+                Log.d(TAG,
+                        "BT off — skipping discovery");
+
                 return;
             }
+
             currentScanMacs.clear();
-            if (adapter.isDiscovering()) adapter.cancelDiscovery();
+
+            if (adapter.isDiscovering())
+                adapter.cancelDiscovery();
+
             boolean started = adapter.startDiscovery();
-            Log.d(TAG, "BT discovery started: " + started);
+
+            Log.d(TAG,
+                    "BT discovery started: " + started);
+
         } catch (SecurityException e) {
-            Log.w(TAG, "BT scan permission denied — skipping");
+
+            Log.w(TAG,
+                    "BT scan permission denied");
+
         }
     }
 
     private void stopBluetoothDiscovery() {
+
         try {
-            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-            if (adapter != null && adapter.isDiscovering()) adapter.cancelDiscovery();
+
+            BluetoothAdapter adapter =
+                    BluetoothAdapter.getDefaultAdapter();
+
+            if (adapter != null && adapter.isDiscovering())
+                adapter.cancelDiscovery();
+
         } catch (SecurityException ignored) {}
     }
 
     private void persistSeenMacs(Set<String> macs) {
-        SharedPreferences prefs = getSharedPreferences(SocialContextManager.BT_PREFS, MODE_PRIVATE);
+
+        SharedPreferences prefs =
+                getSharedPreferences(
+                        SocialContextManager.BT_PREFS,
+                        MODE_PRIVATE);
+
         prefs.edit()
-             .putStringSet(SocialContextManager.KEY_BT_SEEN, new HashSet<>(macs))
-             .apply();
+                .putStringSet(
+                        SocialContextManager.KEY_BT_SEEN,
+                        new HashSet<>(macs))
+                .apply();
     }
 
-    // ── Notification / channel ────────────────────────────────────────────────
-
     private void registerUnlockReceiver() {
-        unlockReceiver = new UnlockReceiver();
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(Intent.ACTION_USER_PRESENT);
-        filter.addAction(Intent.ACTION_SCREEN_OFF);
-        registerReceiver(unlockReceiver, filter);
+        // Redundant: UnlockReceiver is already registered in AndroidManifest.xml
+        // with its own monitoring-enabled check.
     }
 
     private Notification buildForegroundNotification() {
-        Intent openApp = new Intent(this, MainActivity.class);
-        PendingIntent pi = PendingIntent.getActivity(
-                this, 0, openApp,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
+        Intent openApp = new Intent(this, MainActivity.class);
+
+        PendingIntent pi = PendingIntent.getActivity(
+                this,
+                0,
+                openApp,
+                PendingIntent.FLAG_UPDATE_CURRENT
+                        | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        return new NotificationCompat.Builder(
+                this,
+                CHANNEL_ID
+        )
                 .setContentTitle("Attune")
-                .setContentText("Monitoring your phone habits in the background")
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentText(
+                        "Monitoring your phone habits")
+                .setSmallIcon(
+                        R.drawable.ic_launcher_foreground)
                 .setContentIntent(pi)
                 .setOngoing(true)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setPriority(
+                        NotificationCompat.PRIORITY_LOW)
                 .build();
     }
 
     private void createNotificationChannel() {
-        NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID, "Monitoring Service", NotificationManager.IMPORTANCE_LOW);
-        channel.setDescription("Persistent notification while Attune monitors your habits");
-        NotificationManager nm = getSystemService(NotificationManager.class);
-        if (nm != null) nm.createNotificationChannel(channel);
+
+        NotificationChannel channel =
+                new NotificationChannel(
+                        CHANNEL_ID,
+                        "Monitoring Service",
+                        NotificationManager.IMPORTANCE_LOW
+                );
+
+        channel.setDescription(
+                "Attune background monitoring");
+
+        NotificationManager nm =
+                getSystemService(NotificationManager.class);
+
+        if (nm != null)
+            nm.createNotificationChannel(channel);
     }
 
-    /** Static helper to start the service from MainActivity */
+    private void updateDailyMetrics(float currentRisk, boolean inSocial) {
+        if (!new SettingsManager(this).isMonitoringEnabled()) return;
+        SharedPreferences prefs = getSharedPreferences(SUMMARY_PREFS, MODE_PRIVATE);
+        String savedDate = prefs.getString(KEY_TODAY_DATE, "");
+        String currentDate = java.text.DateFormat.getDateInstance().format(new java.util.Date());
+
+        SharedPreferences.Editor editor = prefs.edit();
+
+        if (!currentDate.equals(savedDate)) {
+            // New day, reset everything
+            editor.putString(KEY_TODAY_DATE, currentDate);
+            editor.putFloat(KEY_RISK_SUM, currentRisk);
+            editor.putInt(KEY_RISK_COUNT, 1);
+            editor.putInt(KEY_SESSIONS_COUNT, inSocial ? 1 : 0);
+        } else {
+            // Same day, accumulate
+            float sum = prefs.getFloat(KEY_RISK_SUM, 0f) + currentRisk;
+            int count = prefs.getInt(KEY_RISK_COUNT, 0) + 1;
+            editor.putFloat(KEY_RISK_SUM, sum);
+            editor.putInt(KEY_RISK_COUNT, count);
+            
+            if (inSocial) {
+                // Simplified: Increment sessions count if we detect social context during this check
+                // In a more robust system, we would track session start/end
+                int sessions = prefs.getInt(KEY_SESSIONS_COUNT, 0) + 1;
+                editor.putInt(KEY_SESSIONS_COUNT, sessions);
+            }
+        }
+        editor.apply();
+    }
+
+    private void updateStreakStatus(float risk, float threshold) {
+        if (!new SettingsManager(this).isMonitoringEnabled()) return;
+        String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date());
+        com.cce.attune.database.AppDatabase db = com.cce.attune.database.AppDatabase.getInstance(this);
+        com.cce.attune.database.DailyStreak existing = db.dailyStreakDao().getStreakForDate(today);
+
+        if (existing == null) {
+            // First check of the day
+            int initialStatus = (risk >= threshold) ? 2 : 1;
+            db.dailyStreakDao().insertOrUpdate(new com.cce.attune.database.DailyStreak(today, initialStatus));
+        } else if (existing.status == 1 && risk >= threshold) {
+            // Found phubbing, break the "clean" streak for today
+            db.dailyStreakDao().updateStatus(today, 2);
+        }
+    }
+
     public static void startService(Context context) {
-        context.startForegroundService(new Intent(context, MonitoringService.class));
+
+        context.startForegroundService(
+                new Intent(context, MonitoringService.class)
+        );
     }
 }

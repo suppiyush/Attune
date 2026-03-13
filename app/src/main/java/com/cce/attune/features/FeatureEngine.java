@@ -1,6 +1,7 @@
 package com.cce.attune.features;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.cce.attune.telemetry.UsageStatsCollector;
 

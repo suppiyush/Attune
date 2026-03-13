@@ -94,9 +94,9 @@ public class ScheduleFragment extends Fragment {
                 granted -> {
                     boolean allGranted = !granted.containsValue(false);
                     if (allGranted) {
+                        android.preference.PreferenceManager.getDefaultSharedPreferences(requireContext())
+                                .edit().putBoolean("pref_bluetooth_enabled", true).apply();
                         if (pendingAction != null) pendingAction.run();
-                    } else {
-                        showGoToSettingsDialog();
                     }
                 });
     }
@@ -148,7 +148,7 @@ public class ScheduleFragment extends Fragment {
         // Bluetooth tab: gate BT enable + permission before revealing BT UI
         binding.btnModeBluetooth.setOnClickListener(v -> {
             pendingAction = () -> applyMode(Mode.BLUETOOTH);
-            checkBtEnabledThen(() -> checkBtPermissionsThen(() -> applyMode(Mode.BLUETOOTH)));
+            checkBtPermissionsThen(() -> checkBtEnabledThen(() -> applyMode(Mode.BLUETOOTH)));
         });
     }
 
@@ -199,31 +199,38 @@ public class ScheduleFragment extends Fragment {
             next.run();
             return;
         }
+
         pendingAction = next;
-        // Show rationale then request
-        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle("Bluetooth Permission Needed")
-                .setMessage("Attune needs Bluetooth permission to scan for nearby devices and detect your social group.")
-                .setPositiveButton("Grant", (d, w) -> permissionLauncher.launch(new String[]{
-                        Manifest.permission.BLUETOOTH_SCAN,
-                        Manifest.permission.BLUETOOTH_CONNECT
-                }))
-                .setNegativeButton("Cancel", null)
-                .show();
+        
+        android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(requireContext());
+        boolean hasRequested = prefs.getBoolean("has_requested_bt", false);
+        boolean rationaleScan = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(requireActivity(), Manifest.permission.BLUETOOTH_SCAN);
+        boolean rationaleConn = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(requireActivity(), Manifest.permission.BLUETOOTH_CONNECT);
+
+        if ((!rationaleScan && !rationaleConn) && hasRequested) { // Permanently denied
+            showGoToSettingsDialog();
+            return;
+        }
+
+        prefs.edit().putBoolean("has_requested_bt", true).apply();
+        permissionLauncher.launch(new String[]{
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT
+        });
     }
 
     /** Shown when user permanently denied permission — guide them to app settings. */
     private void showGoToSettingsDialog() {
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle("Permission Required")
-                .setMessage("Bluetooth permission was denied. Please enable it in Settings → Apps → Attune → Permissions.")
-                .setPositiveButton("Open Settings", (d, w) -> {
+                .setTitle("Bluetooth Required")
+                .setMessage("Attune needs Bluetooth permission to function properly.")
+                .setPositiveButton("Go to Settings", (d, w) -> {
                     Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                             Uri.fromParts("package", requireContext().getPackageName(), null));
                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(intent);
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton("Later", null)
                 .show();
     }
 
@@ -350,12 +357,7 @@ public class ScheduleFragment extends Fragment {
     }
 
     private void startBluetoothScan() {
-        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
-            // Shouldn't normally happen (gate runs before openDevicePicker), but guard anyway
-            checkBtEnabledThen(() -> checkBtPermissionsThen(this::doStartScan));
-            return;
-        }
-        checkBtPermissionsThen(this::doStartScan);
+        checkBtPermissionsThen(() -> checkBtEnabledThen(this::doStartScan));
     }
 
     private void doStartScan() {

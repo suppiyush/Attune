@@ -30,5 +30,9 @@ public interface SocialSessionDao {
 
     @Query("DELETE FROM social_sessions WHERE id = :id")
     void deleteById(int id);
+
+    /** Sessions that end after nowMs */
+    @Query("SELECT * FROM social_sessions WHERE endMs > :nowMs")
+    List<SocialSession> getSessionsEndingAfter(long nowMs);
 }
 

@@ -26,7 +26,7 @@ public class PhubbingClassifier {
 
     private static final String TAG        = "PhubbingClassifier";
     private static final String MODEL_FILE = "phubbing_model.tflite";
-    private static final float  STUB_SCORE = 0.5f;
+    private static final float  STUB_SCORE = 0f;
 
     private final Interpreter interpreter;
 

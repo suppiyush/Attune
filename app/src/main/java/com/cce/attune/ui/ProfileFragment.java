@@ -1,26 +1,40 @@
 package com.cce.attune.ui;
 
+import android.Manifest;
+import android.content.Context;
 import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.cce.attune.R;
 import com.cce.attune.context.UserProfileStore;
 import com.cce.attune.databinding.FragmentProfileBinding;
 import com.cce.attune.risk.StrictnessManager;
+import com.cce.attune.telemetry.UsageStatsCollector;
 
 public class ProfileFragment extends Fragment {
 
     private static final String PREF_MONITORING    = "pref_monitoring_enabled";
     private static final String PREF_NOTIFICATIONS = "pref_notifications_enabled";
     private static final String PREF_BLUETOOTH     = "pref_bluetooth_enabled";
+
+    private static final int REQ_NOTIF = 201;
+    private static final int REQ_BT    = 202;
+
+    private boolean isUpdatingSwitch = false;
 
     private FragmentProfileBinding binding;
 
@@ -38,6 +52,8 @@ public class ProfileFragment extends Fragment {
         setupUserProfileCard();
         setupToggles();
         setupStrictness();
+        refreshSummaryData();
+        refreshStreakGrid();
     }
 
     private void setupUserProfileCard() {
@@ -80,16 +96,159 @@ public class ProfileFragment extends Fragment {
     private void setupToggles() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
 
+        isUpdatingSwitch = true;
         binding.switchMonitoring.setChecked(prefs.getBoolean(PREF_MONITORING, true));
         binding.switchNotifications.setChecked(prefs.getBoolean(PREF_NOTIFICATIONS, true));
         binding.switchBluetooth.setChecked(prefs.getBoolean(PREF_BLUETOOTH, true));
+        isUpdatingSwitch = false;
 
-        binding.switchMonitoring.setOnCheckedChangeListener((btn, checked) ->
-                prefs.edit().putBoolean(PREF_MONITORING, checked).apply());
-        binding.switchNotifications.setOnCheckedChangeListener((btn, checked) ->
-                prefs.edit().putBoolean(PREF_NOTIFICATIONS, checked).apply());
-        binding.switchBluetooth.setOnCheckedChangeListener((btn, checked) ->
-                prefs.edit().putBoolean(PREF_BLUETOOTH, checked).apply());
+        binding.switchMonitoring.setOnCheckedChangeListener((btn, checked) -> {
+            if (isUpdatingSwitch) return;
+            if (checked) {
+                // Usage Stats only
+                if (!new UsageStatsCollector(requireContext()).hasUsageStatsPermission()) {
+                    isUpdatingSwitch = true;
+                    btn.setChecked(false);
+                    isUpdatingSwitch = false;
+                    showUsageAccessDialog();
+                    return;
+                }
+            }
+            prefs.edit().putBoolean(PREF_MONITORING, checked).apply();
+            
+            if (checked) {
+                com.cce.attune.services.MonitoringService.startService(requireContext());
+                com.cce.attune.services.MonitoringWorker.startMonitoring(requireContext());
+            } else {
+                requireContext().stopService(new android.content.Intent(requireContext(), com.cce.attune.services.MonitoringService.class));
+                com.cce.attune.services.MonitoringWorker.startMonitoring(requireContext());
+            }
+        });
+
+        binding.switchNotifications.setOnCheckedChangeListener((btn, checked) -> {
+            if (isUpdatingSwitch) return;
+            if (checked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    
+                    boolean hasRequested = prefs.getBoolean("has_requested_notif", false);
+                    boolean rationale = shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS);
+                    
+                    if (!rationale && hasRequested) { // Permanently denied
+                        showGoToSettingsDialog("Notifications");
+                        isUpdatingSwitch = true;
+                        btn.setChecked(false);
+                        isUpdatingSwitch = false;
+                        return;
+                    }
+                    
+                    prefs.edit().putBoolean("has_requested_notif", true).apply();
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIF);
+                    return; // Wait for result
+                }
+            }
+            prefs.edit().putBoolean(PREF_NOTIFICATIONS, checked).apply();
+        });
+
+        binding.switchBluetooth.setOnCheckedChangeListener((btn, checked) -> {
+            if (isUpdatingSwitch) return;
+            if (checked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                boolean scanG = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED;
+                boolean connG = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+                if (!scanG || !connG) {
+                    
+                    boolean hasRequested = prefs.getBoolean("has_requested_bt", false);
+                    boolean rationaleScan = shouldShowRequestPermissionRationale(Manifest.permission.BLUETOOTH_SCAN);
+                    boolean rationaleConn = shouldShowRequestPermissionRationale(Manifest.permission.BLUETOOTH_CONNECT);
+                    
+                    if ((!rationaleScan && !rationaleConn) && hasRequested) { // Permanently denied
+                        showGoToSettingsDialog("Bluetooth");
+                        isUpdatingSwitch = true;
+                        btn.setChecked(false);
+                        isUpdatingSwitch = false;
+                        return;
+                    }
+                    
+                    prefs.edit().putBoolean("has_requested_bt", true).apply();
+                    requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT}, REQ_BT);
+                    return; // Wait for result
+                }
+            }
+            prefs.edit().putBoolean(PREF_BLUETOOTH, checked).apply();
+        });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
+
+        if (requestCode == REQ_NOTIF) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                prefs.edit().putBoolean(PREF_NOTIFICATIONS, true).apply();
+            } else {
+                isUpdatingSwitch = true;
+                binding.switchNotifications.setChecked(false);
+                isUpdatingSwitch = false;
+            }
+        } else if (requestCode == REQ_BT) {
+            boolean allGranted = true;
+            for (int res : grantResults) {
+                if (res != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false;
+                    break;
+                }
+            }
+            if (grantResults.length == 0) allGranted = false;
+
+            if (allGranted) {
+                prefs.edit().putBoolean(PREF_BLUETOOTH, true).apply();
+            } else {
+                isUpdatingSwitch = true;
+                binding.switchBluetooth.setChecked(false);
+                isUpdatingSwitch = false;
+            }
+        }
+    }
+
+    private void showUsageAccessDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Usage Access Required")
+                .setMessage("Attune needs App Usage Access permission to strictly monitor your phone habits.")
+                .setPositiveButton("Go to Settings", (dialog, which) -> {
+                    try {
+                        startActivity(new android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS));
+                    } catch (Exception ignored) {}
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showGoToSettingsDialog(String permissionName) {
+        
+        String title;
+        String message;
+        
+        if (permissionName.equals("Notifications")) {
+            title = "Notification Access Required";
+            message = "Attune needs Notification permission to send you Phubbing alerts.";
+        } else {
+            title = permissionName + " Required";
+            message = "Attune needs " + permissionName + " permission to function properly.";
+        }
+        
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("Go to Settings", (d, w) -> {
+                    android.content.Intent intent = new android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.fromParts("package", requireContext().getPackageName(), null));
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void setupStrictness() {
@@ -121,6 +280,164 @@ public class ProfileFragment extends Fragment {
         super.onResume();
         if (binding != null) {
             refreshUserProfileUi(new UserProfileStore(requireContext()));
+            
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
+
+            // Validate actual permission state to catch out-of-band changes
+            boolean hasUsage = new UsageStatsCollector(requireContext()).hasUsageStatsPermission();
+            if (!hasUsage) {
+                prefs.edit().putBoolean(PREF_MONITORING, false).apply();
+            }
+
+            boolean hasNotif = true;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                hasNotif = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+            }
+            if (!hasNotif) {
+                prefs.edit().putBoolean(PREF_NOTIFICATIONS, false).apply();
+            }
+
+            boolean hasBt = true;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                boolean scanG = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED;
+                boolean connG = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+                hasBt = scanG && connG;
+            }
+            if (!hasBt) {
+                prefs.edit().putBoolean(PREF_BLUETOOTH, false).apply();
+            }
+
+            // Sync visual UI with confirmed preferences state
+            isUpdatingSwitch = true;
+            binding.switchMonitoring.setChecked(prefs.getBoolean(PREF_MONITORING, true));
+            binding.switchNotifications.setChecked(prefs.getBoolean(PREF_NOTIFICATIONS, true));
+            binding.switchBluetooth.setChecked(prefs.getBoolean(PREF_BLUETOOTH, true));
+            isUpdatingSwitch = false;
+
+            refreshSummaryData();
+            refreshStreakGrid();
+        }
+    }
+
+    private void refreshSummaryData() {
+        if (binding == null) return;
+
+        SharedPreferences prefs = requireContext().getSharedPreferences("daily_summary_prefs", Context.MODE_PRIVATE);
+        
+        // Date check for UI as well
+        String savedDate = prefs.getString("today_date", "");
+        String currentDate = java.text.DateFormat.getDateInstance().format(new java.util.Date());
+        
+        if (!currentDate.equals(savedDate)) {
+            binding.tvProfileSessions.setText("0");
+            binding.tvProfileAvgRisk.setText("0%");
+        } else {
+            int sessions = prefs.getInt("sessions_count", 0);
+            float riskSum = prefs.getFloat("risk_sum", 0f);
+            int riskCount = prefs.getInt("risk_count", 0);
+            
+            binding.tvProfileSessions.setText(String.valueOf(sessions));
+            
+            if (riskCount > 0) {
+                int avgRisk = Math.round((riskSum / riskCount) * 100);
+                binding.tvProfileAvgRisk.setText(avgRisk + "%");
+            } else {
+                binding.tvProfileAvgRisk.setText("0%");
+            }
+        }
+
+        // Unlocks - calculated from UsageStatsCollector
+        UsageStatsCollector collector = new UsageStatsCollector(requireContext());
+        long now = System.currentTimeMillis();
+        // Today's start (roughly)
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        cal.set(java.util.Calendar.MINUTE, 0);
+        cal.set(java.util.Calendar.SECOND, 0);
+        
+        int unlocks = collector.getUnlockCount(cal.getTimeInMillis(), now);
+        binding.tvProfileUnlocks.setText(String.valueOf(unlocks));
+    }
+
+    private void refreshStreakGrid() {
+        if (binding == null) return;
+
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        java.text.SimpleDateFormat monthFormat = new java.text.SimpleDateFormat("MMMM", java.util.Locale.US);
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US);
+        
+        // Month names
+        binding.tvMonthCurr.setText(monthFormat.format(cal.getTime()));
+        java.util.Calendar prevMonthCal = (java.util.Calendar) cal.clone();
+        prevMonthCal.add(java.util.Calendar.MONTH, -1);
+        binding.tvMonthPrev.setText(monthFormat.format(prevMonthCal.getTime()));
+
+        float density = getResources().getDisplayMetrics().density;
+        int sizePx = (int) (14 * density); // Slightly smaller to fit two side-by-side
+        int marginPx = (int) (2 * density);
+
+        com.cce.attune.database.AppDatabase db = com.cce.attune.database.AppDatabase.getInstance(requireContext());
+
+        // Render Previous Month
+        renderMonthGrid(binding.gridStreakPrev, prevMonthCal, db, sdf, sizePx, marginPx);
+        
+        // Render Current Month
+        renderMonthGrid(binding.gridStreakCurr, cal, db, sdf, sizePx, marginPx);
+    }
+
+    private void renderMonthGrid(android.widget.GridLayout grid, java.util.Calendar targetMonth, 
+                                com.cce.attune.database.AppDatabase db, java.text.SimpleDateFormat sdf,
+                                int sizePx, int marginPx) {
+        grid.removeAllViews();
+        
+        java.util.Calendar cal = (java.util.Calendar) targetMonth.clone();
+        cal.set(java.util.Calendar.DAY_OF_MONTH, 1);
+        int daysInMonth = cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH);
+        
+        String startDate = sdf.format(cal.getTime());
+        cal.set(java.util.Calendar.DAY_OF_MONTH, daysInMonth);
+        String endDate = sdf.format(cal.getTime());
+
+        java.util.List<com.cce.attune.database.DailyStreak> streaks = db.dailyStreakDao().getStreaksInRange(startDate, endDate);
+        java.util.Map<String, Integer> streakMap = new java.util.HashMap<>();
+        for (com.cce.attune.database.DailyStreak s : streaks) {
+            streakMap.put(s.date, s.status);
+        }
+
+        cal.set(java.util.Calendar.DAY_OF_MONTH, 1);
+        int firstDayOfWeek = cal.get(java.util.Calendar.DAY_OF_WEEK);
+        
+        for (int i = 1; i < firstDayOfWeek; i++) {
+            View space = new View(requireContext());
+            grid.addView(space, new android.widget.GridLayout.LayoutParams(
+                android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED),
+                android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED)
+            ));
+        }
+
+        for (int day = 1; day <= daysInMonth; day++) {
+            cal.set(java.util.Calendar.DAY_OF_MONTH, day);
+            String dateKey = sdf.format(cal.getTime());
+            int status = streakMap.getOrDefault(dateKey, 0);
+
+            View box = new View(requireContext());
+            box.setBackgroundResource(R.drawable.streak_box_base);
+            
+            if (status == 1) {
+                box.getBackground().setTint(requireContext().getColor(R.color.primary));
+            } else {
+                box.getBackground().setTint(requireContext().getColor(R.color.bg_dark));
+            }
+
+            android.widget.GridLayout.LayoutParams params = new android.widget.GridLayout.LayoutParams(
+                android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED),
+                android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED)
+            );
+            params.width = sizePx;
+            params.height = sizePx;
+            params.setMargins(marginPx, marginPx, marginPx, marginPx);
+            
+            grid.addView(box, params);
         }
     }
 
