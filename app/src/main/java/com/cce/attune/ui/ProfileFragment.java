@@ -53,6 +53,8 @@ public class ProfileFragment extends Fragment {
         setupStrictness();
         refreshSummaryData();
         refreshStreakGrid();
+        refreshXpCard();
+        setupXpInfoButton();
     }
 
     private void setupUserProfileCard() {
@@ -231,24 +233,36 @@ public class ProfileFragment extends Fragment {
     private void setupStrictness() {
         StrictnessManager sm = new StrictnessManager(requireContext());
 
-        // Select the currently saved button
-        int selectedId;
-        switch (sm.getStrictness()) {
-            case LOW:  selectedId = R.id.btn_strictness_low;  break;
-            case HIGH: selectedId = R.id.btn_strictness_high; break;
-            default:   selectedId = R.id.btn_strictness_medium; break;
-        }
-        binding.toggleStrictness.check(selectedId);
+        String[] options = {"Low", "Medium", "High"};
+        android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_spinner_item,
+                options
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        binding.spinnerStrictness.setAdapter(adapter);
 
-        binding.toggleStrictness.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
-            if (!isChecked) return;
-            if (checkedId == R.id.btn_strictness_low) {
-                sm.setStrictness(StrictnessManager.Strictness.LOW);
-            } else if (checkedId == R.id.btn_strictness_high) {
-                sm.setStrictness(StrictnessManager.Strictness.HIGH);
-            } else {
-                sm.setStrictness(StrictnessManager.Strictness.MEDIUM);
+        // Set initial selection
+        int pos;
+        switch (sm.getStrictness()) {
+            case LOW:  pos = 0; break;
+            case HIGH: pos = 2; break;
+            default:   pos = 1; break;
+        }
+        binding.spinnerStrictness.setSelection(pos, false);
+
+        binding.spinnerStrictness.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
+                switch (position) {
+                    case 0: sm.setStrictness(StrictnessManager.Strictness.LOW);    break;
+                    case 2: sm.setStrictness(StrictnessManager.Strictness.HIGH);   break;
+                    default: sm.setStrictness(StrictnessManager.Strictness.MEDIUM); break;
+                }
             }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
     }
 
@@ -289,6 +303,7 @@ public class ProfileFragment extends Fragment {
 
             refreshSummaryData();
             refreshStreakGrid();
+            refreshXpCard();
         }
     }
 
@@ -335,6 +350,11 @@ public class ProfileFragment extends Fragment {
     private void refreshStreakGrid() {
         if (binding == null) return;
 
+        // Update streak counter in Activity card
+        com.cce.attune.gamification.XpManager xp = new com.cce.attune.gamification.XpManager(requireContext());
+        int streak = xp.getCleanStreak();
+        String streakText = streak == 1 ? "1 day" : streak + " days";
+        binding.tvActivityStreak.setText(streakText);
         java.util.Calendar cal = java.util.Calendar.getInstance();
         java.text.SimpleDateFormat monthFormat = new java.text.SimpleDateFormat("MMMM", java.util.Locale.US);
         java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US);
@@ -412,6 +432,50 @@ public class ProfileFragment extends Fragment {
             
             grid.addView(box, params);
         }
+    }
+
+    private void refreshXpCard() {
+        if (binding == null) return;
+
+        com.cce.attune.gamification.XpManager xp = new com.cce.attune.gamification.XpManager(requireContext());
+
+        int level       = xp.getLevel() + 1;
+        String name     = xp.getLevelName();
+        int total       = xp.getTotalXp();
+        int xpForNext   = xp.getXpForNextLevel();
+        int progress    = Math.round(xp.getLevelProgress() * 100);
+
+        binding.tvXpLevelBadge.setText(String.valueOf(level));
+        binding.tvXpLevelName.setText(name);
+        binding.tvXpTotal.setText(String.valueOf(total));
+        binding.pbXpProgress.setProgress(progress);
+
+        if (xpForNext > 0) {
+            binding.tvXpNextLevel.setText(xpForNext + " XP to next level");
+        } else {
+            binding.tvXpNextLevel.setText("Max level reached!");
+        }
+    }
+
+    private void setupXpInfoButton() {
+        if (binding == null) return;
+        binding.btnXpInfo.setOnClickListener(v -> {
+            android.view.View dialogView = android.view.LayoutInflater.from(requireContext())
+                    .inflate(R.layout.dialog_xp_info, null);
+
+            com.google.android.material.dialog.MaterialAlertDialogBuilder builder =
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                            .setView(dialogView);
+
+            androidx.appcompat.app.AlertDialog dialog = builder.create();
+            dialog.show();
+
+            // Make the dialog window background transparent so the
+            // MaterialAlertDialog's own rounded-corner shape shows through
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            }
+        });
     }
 
     @Override

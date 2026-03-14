@@ -51,7 +51,7 @@
                     android:textStyle="bold"
                     android:textColor="@color/bg_dark"
                     android:gravity="center"
-                    android:background="@color/primary"
+                    android:background="@drawable/circle_primary"
                     android:layout_marginEnd="14dp" />
 
                 <!-- Name + age/gender -->
@@ -211,6 +211,151 @@
             </androidx.cardview.widget.CardView>
         </LinearLayout>
 
+        <!-- XP & LEVEL header row with info button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="XP &amp; LEVEL"
+                android:textSize="11sp"
+                android:textColor="@color/text_secondary"
+                android:letterSpacing="0.1" />
+
+            <TextView
+                android:id="@+id/btn_xp_info"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:text="ⓘ"
+                android:textSize="16sp"
+                android:textColor="@color/text_secondary"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true" />
+        </LinearLayout>
+
+        <!-- XP Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="@color/bg_card"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Top row: Level badge + name + XP total -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+
+                    <!-- Level circle badge -->
+                    <LinearLayout
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:background="@drawable/circle_primary"
+                        android:layout_marginEnd="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="LVL"
+                            android:textSize="8sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFFFFFAA"
+                            android:letterSpacing="0.08" />
+
+                        <TextView
+                            android:id="@+id/tv_xp_level_badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="1"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/bg_surface"
+                            android:gravity="center" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_xp_level_name"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Newcomer"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary" />
+
+                        <TextView
+                            android:id="@+id/tv_xp_next_level"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="100 XP to next level"
+                            android:textSize="11sp"
+                            android:textColor="@color/text_secondary"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <!-- Total XP -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="end">
+
+                        <TextView
+                            android:id="@+id/tv_xp_total"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/primary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="XP"
+                            android:textSize="10sp"
+                            android:textColor="@color/text_secondary"
+                            android:gravity="end" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Level progress bar -->
+                <ProgressBar
+                    android:id="@+id/pb_xp_progress"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:max="100"
+                    android:progress="0"
+                    android:progressDrawable="@drawable/xp_progress_drawable" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
         <!-- Activity Grid row -->
         <TextView
             android:layout_width="match_parent"
@@ -220,6 +365,8 @@
             android:textColor="@color/text_secondary"
             android:letterSpacing="0.1"
             android:layout_marginBottom="8dp" />
+
+
 
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
@@ -234,6 +381,33 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
+
+                <!-- Streak counter row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="🔥 Clean Streak"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary" />
+
+                    <TextView
+                        android:id="@+id/tv_activity_streak"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 days"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/primary" />
+                </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -313,14 +487,13 @@
                         android:layout_width="10dp"
                         android:layout_height="10dp"
                         android:layout_marginStart="4dp"
-                        android:background="@drawable/streak_box_base" />
+                        android:background="@drawable/streak_box_legend_neg" />
 
                     <View
                         android:layout_width="10dp"
                         android:layout_height="10dp"
                         android:layout_marginStart="12dp"
-                        android:background="@drawable/streak_box_base"
-                        android:backgroundTint="@color/primary" />
+                        android:background="@drawable/streak_box_legend_pos" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -425,12 +598,11 @@
                 <!-- Alert Sensitivity -->
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
+                    android:layout_height="56dp"
+                    android:orientation="horizontal"
                     android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="12dp">
+                    android:paddingEnd="8dp"
+                    android:gravity="center_vertical">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -438,54 +610,16 @@
                         android:text="Alert Sensitivity"
                         android:textSize="14sp"
                         android:textColor="@color/text_primary"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginEnd="16dp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <Spinner
+                        android:id="@+id/spinner_strictness"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="Controls how readily phubbing alerts are triggered"
-                        android:textSize="12sp"
-                        android:textColor="@color/text_secondary"
-                        android:layout_marginBottom="10dp" />
+                        android:layout_weight="1"
+                        android:textAlignment="viewEnd"
+                        android:spinnerMode="dropdown" />
 
-                    <com.google.android.material.button.MaterialButtonToggleGroup
-                        android:id="@+id/toggle_strictness"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:singleSelection="true"
-                        app:selectionRequired="true">
-
-                        <Button
-                            android:id="@+id/btn_strictness_low"
-                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="36dp"
-                            android:layout_weight="1"
-                            android:text="Low"
-                            android:textSize="12sp"
-                            app:strokeColor="@color/primary" />
-
-                        <Button
-                            android:id="@+id/btn_strictness_medium"
-                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="36dp"
-                            android:layout_weight="1"
-                            android:text="Medium"
-                            android:textSize="12sp"
-                            app:strokeColor="@color/primary" />
-
-                        <Button
-                            android:id="@+id/btn_strictness_high"
-                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_height="36dp"
-                            android:layout_weight="1"
-                            android:text="High"
-                            android:textSize="12sp"
-                            app:strokeColor="@color/primary" />
-
-                    </com.google.android.material.button.MaterialButtonToggleGroup>
                 </LinearLayout>
 
             </LinearLayout>

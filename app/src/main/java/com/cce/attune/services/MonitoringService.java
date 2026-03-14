@@ -128,6 +128,7 @@ public class MonitoringService extends Service {
 
             updateDailyMetrics(risk, inSocialContext);
             updateStreakStatus(risk, threshold);
+            awardDailyXp(inSocialContext);
 
             if (inSocialContext && risk >= threshold) {
 
@@ -464,6 +465,35 @@ public class MonitoringService extends Service {
         } else if (existing.status == 1 && risk >= threshold) {
             // Found phubbing, break the "clean" streak for today
             db.dailyStreakDao().updateStatus(today, 2);
+        }
+    }
+
+    private void awardDailyXp(boolean inSocialContext) {
+        try {
+            String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date());
+
+            com.cce.attune.database.AppDatabase db = com.cce.attune.database.AppDatabase.getInstance(this);
+            com.cce.attune.database.DailyStreak streak = db.dailyStreakDao().getStreakForDate(today);
+            boolean cleanDay = streak != null && streak.status == 1;
+
+            // Average risk for today
+            SharedPreferences summaryPrefs = getSharedPreferences(SUMMARY_PREFS, MODE_PRIVATE);
+            float riskSum   = summaryPrefs.getFloat(KEY_RISK_SUM, 0f);
+            int   riskCount = summaryPrefs.getInt(KEY_RISK_COUNT, 0);
+            float avgRisk   = riskCount > 0 ? (riskSum / riskCount) : 1f;
+
+            // Unlock count for today
+            com.cce.attune.telemetry.UsageStatsCollector collector = new com.cce.attune.telemetry.UsageStatsCollector(this);
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            cal.set(java.util.Calendar.MINUTE, 0);
+            cal.set(java.util.Calendar.SECOND, 0);
+            int unlocks = collector.getUnlockCount(cal.getTimeInMillis(), System.currentTimeMillis());
+
+            new com.cce.attune.gamification.XpManager(this)
+                    .awardDailyXp(today, cleanDay, avgRisk, unlocks, inSocialContext);
+        } catch (Exception e) {
+            Log.e(TAG, "XP award failed", e);
         }
     }
 

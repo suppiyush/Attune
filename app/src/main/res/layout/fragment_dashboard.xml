@@ -213,7 +213,8 @@
                         <View
                             android:layout_width="12dp"
                             android:layout_height="12dp"
-                            android:background="@color/bar_social"
+                            android:background="@drawable/streak_box_base"
+                            android:backgroundTint="@color/bar_social"
                             android:layout_marginEnd="4dp"
                             android:layout_gravity="center_vertical" />
 
@@ -228,7 +229,8 @@
                         <View
                             android:layout_width="12dp"
                             android:layout_height="12dp"
-                            android:background="@color/bar_baseline"
+                            android:background="@drawable/streak_box_base"
+                            android:backgroundTint="@color/bar_baseline"
                             android:layout_marginEnd="4dp"
                             android:layout_gravity="center_vertical" />
 
