@@ -13,9 +13,10 @@ import androidx.room.RoomDatabase;
         SsidGroup.class,
         SsidGroupMember.class,
         FeedbackEvent.class,
-        DailyStreak.class
+        DailyStreak.class,
+        RiskRecord.class
     },
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 public abstract class AppDatabase extends RoomDatabase {
@@ -27,6 +28,7 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract SsidGroupDao ssidGroupDao();
     public abstract FeedbackDao feedbackDao();
     public abstract DailyStreakDao dailyStreakDao();
+    public abstract RiskRecordDao riskRecordDao();
 
     public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {

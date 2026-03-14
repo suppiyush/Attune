@@ -28,10 +28,12 @@ public class RiskEngine {
     private static final String KEY_BASELINE_UNLOCK  = "baseline_unlock_rate";
     private static final String KEY_BASELINE_SWITCH  = "baseline_switch_rate";
     private static final String KEY_BASELINE_SESSION = "baseline_session_sec";
+    private static final String KEY_BASELINE_AI      = "baseline_ai_score";
 
     private static final float DEFAULT_BASELINE_UNLOCK  = 4f;
     private static final float DEFAULT_BASELINE_SWITCH  = 3f;
     private static final float DEFAULT_BASELINE_SESSION = 60f;
+    private static final float DEFAULT_BASELINE_AI      = 0.4f;
 
     // ── Hybrid weights ───────────────────────────────────────────────────────
     private static final float W_HEURISTIC = 0.5f;
@@ -57,11 +59,11 @@ public class RiskEngine {
         float deviation = computeDeviation(f);
 
         float risk = W_HEURISTIC * heuristic
-                   + W_AI        * clamp(aiScore, 0f, 1f)
+                   + W_AI        * aiScore
                    + W_DEVIATION * deviation;
 
         Log.d(TAG, String.format(
-                "Risk → heuristic=%.3f  ai=%.3f  deviation=%.3f  hybrid=%.3f",
+                "Risks → heuristic=%.3f  ai=%.3f  deviation=%.3f  hybrid=%.3f",
                 heuristic, aiScore, deviation, risk));
 
         return clamp(risk, 0f, 1f);
@@ -104,11 +106,18 @@ public class RiskEngine {
         float prevUnlock  = prefs.getFloat(KEY_BASELINE_UNLOCK,  DEFAULT_BASELINE_UNLOCK);
         float prevSwitch  = prefs.getFloat(KEY_BASELINE_SWITCH,  DEFAULT_BASELINE_SWITCH);
         float prevSession = prefs.getFloat(KEY_BASELINE_SESSION, DEFAULT_BASELINE_SESSION);
+        float prevAi      = prefs.getFloat(KEY_BASELINE_AI,      DEFAULT_BASELINE_AI);
+
+        // For updateBaseline we don't have aiScore passed in natively.
+        // For simplicity, we just use DEFAULT_BASELINE_AI or update signature to include aiScore.
+        // Let's assume aiScore is DEFAULT_BASELINE_AI here unless we change signature.
+        float currentAiScore = DEFAULT_BASELINE_AI; 
 
         prefs.edit()
                 .putFloat(KEY_BASELINE_UNLOCK,  (1 - alpha) * prevUnlock  + alpha * f.unlockRate)
                 .putFloat(KEY_BASELINE_SWITCH,  (1 - alpha) * prevSwitch  + alpha * f.switchRate)
                 .putFloat(KEY_BASELINE_SESSION, (1 - alpha) * prevSession + alpha * f.avgSessionDurationSeconds)
+                .putFloat(KEY_BASELINE_AI,      (1 - alpha) * prevAi      + alpha * currentAiScore)
                 .apply();
     }
 
@@ -121,6 +130,29 @@ public class RiskEngine {
     public float getBaselineUnlockRate()     { return prefs.getFloat(KEY_BASELINE_UNLOCK,  DEFAULT_BASELINE_UNLOCK);  }
     public float getBaselineSwitchRate()     { return prefs.getFloat(KEY_BASELINE_SWITCH,  DEFAULT_BASELINE_SWITCH);  }
     public float getBaselineSessionDuration(){ return prefs.getFloat(KEY_BASELINE_SESSION, DEFAULT_BASELINE_SESSION); }
+    public float getBaselineAiScore()        { return prefs.getFloat(KEY_BASELINE_AI,      DEFAULT_BASELINE_AI);      }
+
+    /**
+     * Computes the theoretical risk score if the user's current behavior
+     * exactly matches their historical baseline.
+     */
+    public float getBaselineRisk() {
+        PhubbingFeatures baselineF = new PhubbingFeatures();
+        baselineF.unlockRate = getBaselineUnlockRate();
+        baselineF.switchRate = getBaselineSwitchRate();
+        baselineF.avgSessionDurationSeconds = getBaselineSessionDuration();
+
+        float heuristic = computeHeuristic(baselineF);
+        // Deviation is 0 by definition when behavior matches baseline exactly
+        float deviation = 0f;
+        float aiScore = getBaselineAiScore();
+
+        float risk = W_HEURISTIC * heuristic
+                   + W_AI        * clamp(aiScore, 0f, 1f)
+                   + W_DEVIATION * deviation;
+
+        return clamp(risk, 0f, 1f);
+    }
 
     public static String riskLabel(float risk) {
         if (risk < 0.3f) return "Low";

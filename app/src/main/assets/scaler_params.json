@@ -1,0 +1,23 @@
+{
+  "feature_names": [
+    "unlockRate",
+    "switchRate",
+    "avgSessionDurationSeconds",
+    "socialAppLaunches",
+    "notificationReactionSeconds"
+  ],
+  "mean": [
+    14.485268285209957,
+    11.284874473152884,
+    57.931241158531996,
+    7.246315566370249,
+    139.49044049295736
+  ],
+  "scale": [
+    10.950994156046272,
+    8.099971025048404,
+    49.36357957358173,
+    5.6151339970653575,
+    178.91321452005687
+  ]
+}

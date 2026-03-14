@@ -64,11 +64,7 @@ public class MonitoringService extends Service {
     private final Runnable btScanRunnable = new Runnable() {
         @Override
         public void run() {
-            if (!new SettingsManager(MonitoringService.this).isMonitoringEnabled()) {
-                Log.d(TAG, "Monitoring disabled, stopping self");
-                stopSelf();
-                return;
-            }
+
 
             if (new SettingsManager(MonitoringService.this).isBluetoothSocialDetectionEnabled()) {
                 startBluetoothDiscovery();
@@ -82,11 +78,7 @@ public class MonitoringService extends Service {
     private final Runnable phubbingCheckRunnable = new Runnable() {
         @Override
         public void run() {
-            if (!new SettingsManager(MonitoringService.this).isMonitoringEnabled()) {
-                Log.d(TAG, "Monitoring disabled, stopping self");
-                stopSelf();
-                return;
-            }
+
             runPhubbingCheck();
             handler.postDelayed(this, CHECK_INTERVAL_MS);
         }
@@ -117,19 +109,27 @@ public class MonitoringService extends Service {
                     ? classifier.predict(features)
                     : 0f;
 
+            Log.d(TAG,"ai score"+aiScore);
+            Log.d(TAG,"features"+features);
+
             RiskEngine riskEngine = new RiskEngine(this);
 
             float risk = riskEngine.computeRisk(features, aiScore);
+            
+            // Save this calculated risk score to the database
+            com.cce.attune.database.AppDatabase.getInstance(this)
+                    .riskRecordDao()
+                    .insert(new com.cce.attune.database.RiskRecord(System.currentTimeMillis(), risk));
 
             riskEngine.updateBaseline(features);
 
             float threshold =
-                    new StrictnessManager(this).getThreshold();
+                    new StrictnessManager(this).getThreshold(riskEngine);
 
             updateDailyMetrics(risk, inSocialContext);
             updateStreakStatus(risk, threshold);
 
-            if (inSocialContext && risk >= 0) {
+            if (inSocialContext && risk >= threshold) {
 
                 NotificationService.sendPhubbingAlert(
                         this,
@@ -163,16 +163,13 @@ public class MonitoringService extends Service {
         createNotificationChannel();
 
         registerBtDiscoveryReceiver();
+        registerUnlockReceiver();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        if (!new SettingsManager(this).isMonitoringEnabled()) {
-            Log.d(TAG, "Monitoring disabled, stopping service");
-            stopSelf();
-            return START_NOT_STICKY;
-        }
+
 
         int type = 0;
         if (android.os.Build.VERSION.SDK_INT >= 29) {
@@ -231,6 +228,9 @@ public class MonitoringService extends Service {
 
         if (btDiscoveryReceiver != null)
             unregisterReceiver(btDiscoveryReceiver);
+
+        if (unlockReceiver != null)
+            unregisterReceiver(unlockReceiver);
 
         stopBluetoothDiscovery();
 
@@ -366,8 +366,11 @@ public class MonitoringService extends Service {
     }
 
     private void registerUnlockReceiver() {
-        // Redundant: UnlockReceiver is already registered in AndroidManifest.xml
-        // with its own monitoring-enabled check.
+        unlockReceiver = new UnlockReceiver();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_USER_PRESENT);
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
+        registerReceiver(unlockReceiver, filter);
     }
 
     private Notification buildForegroundNotification() {
@@ -418,7 +421,7 @@ public class MonitoringService extends Service {
     }
 
     private void updateDailyMetrics(float currentRisk, boolean inSocial) {
-        if (!new SettingsManager(this).isMonitoringEnabled()) return;
+
         SharedPreferences prefs = getSharedPreferences(SUMMARY_PREFS, MODE_PRIVATE);
         String savedDate = prefs.getString(KEY_TODAY_DATE, "");
         String currentDate = java.text.DateFormat.getDateInstance().format(new java.util.Date());
@@ -449,7 +452,7 @@ public class MonitoringService extends Service {
     }
 
     private void updateStreakStatus(float risk, float threshold) {
-        if (!new SettingsManager(this).isMonitoringEnabled()) return;
+
         String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date());
         com.cce.attune.database.AppDatabase db = com.cce.attune.database.AppDatabase.getInstance(this);
         com.cce.attune.database.DailyStreak existing = db.dailyStreakDao().getStreakForDate(today);

@@ -41,9 +41,7 @@ public class NotificationService {
      * @param features  feature snapshot used for feedback weight adaptation
      */
     public static void sendPhubbingAlert(Context context, float riskScore, PhubbingFeatures features) {
-        if (!new com.cce.attune.context.SettingsManager(context).isMonitoringEnabled()) {
-            return;
-        }
+
         createChannel(context);
 
         // Persist a FeedbackEvent row (wasCorrect = null until user taps)

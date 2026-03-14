@@ -14,10 +14,7 @@ public class BootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             
-            if (!new com.cce.attune.context.SettingsManager(context).isMonitoringEnabled()) {
-                Log.i(TAG, "Boot completed — Monitoring is disabled, skipping service start");
-                return;
-            }
+
 
             Log.i(TAG, "Boot completed — starting MonitoringService & Worker");
             MonitoringService.startService(context);

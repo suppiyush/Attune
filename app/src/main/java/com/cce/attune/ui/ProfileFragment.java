@@ -27,7 +27,6 @@ import com.cce.attune.telemetry.UsageStatsCollector;
 
 public class ProfileFragment extends Fragment {
 
-    private static final String PREF_MONITORING    = "pref_monitoring_enabled";
     private static final String PREF_NOTIFICATIONS = "pref_notifications_enabled";
     private static final String PREF_BLUETOOTH     = "pref_bluetooth_enabled";
 
@@ -97,33 +96,11 @@ public class ProfileFragment extends Fragment {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
 
         isUpdatingSwitch = true;
-        binding.switchMonitoring.setChecked(prefs.getBoolean(PREF_MONITORING, true));
         binding.switchNotifications.setChecked(prefs.getBoolean(PREF_NOTIFICATIONS, true));
         binding.switchBluetooth.setChecked(prefs.getBoolean(PREF_BLUETOOTH, true));
         isUpdatingSwitch = false;
 
-        binding.switchMonitoring.setOnCheckedChangeListener((btn, checked) -> {
-            if (isUpdatingSwitch) return;
-            if (checked) {
-                // Usage Stats only
-                if (!new UsageStatsCollector(requireContext()).hasUsageStatsPermission()) {
-                    isUpdatingSwitch = true;
-                    btn.setChecked(false);
-                    isUpdatingSwitch = false;
-                    showUsageAccessDialog();
-                    return;
-                }
-            }
-            prefs.edit().putBoolean(PREF_MONITORING, checked).apply();
-            
-            if (checked) {
-                com.cce.attune.services.MonitoringService.startService(requireContext());
-                com.cce.attune.services.MonitoringWorker.startMonitoring(requireContext());
-            } else {
-                requireContext().stopService(new android.content.Intent(requireContext(), com.cce.attune.services.MonitoringService.class));
-                com.cce.attune.services.MonitoringWorker.startMonitoring(requireContext());
-            }
-        });
+
 
         binding.switchNotifications.setOnCheckedChangeListener((btn, checked) -> {
             if (isUpdatingSwitch) return;
@@ -285,9 +262,6 @@ public class ProfileFragment extends Fragment {
 
             // Validate actual permission state to catch out-of-band changes
             boolean hasUsage = new UsageStatsCollector(requireContext()).hasUsageStatsPermission();
-            if (!hasUsage) {
-                prefs.edit().putBoolean(PREF_MONITORING, false).apply();
-            }
 
             boolean hasNotif = true;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -309,7 +283,6 @@ public class ProfileFragment extends Fragment {
 
             // Sync visual UI with confirmed preferences state
             isUpdatingSwitch = true;
-            binding.switchMonitoring.setChecked(prefs.getBoolean(PREF_MONITORING, true));
             binding.switchNotifications.setChecked(prefs.getBoolean(PREF_NOTIFICATIONS, true));
             binding.switchBluetooth.setChecked(prefs.getBoolean(PREF_BLUETOOTH, true));
             isUpdatingSwitch = false;

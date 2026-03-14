@@ -39,9 +39,7 @@ public class UsageStatsCollector {
     }
 
     public int getUnlockCount(long fromMs, long toMs) {
-        if (!new com.cce.attune.context.SettingsManager(context).isMonitoringEnabled()) {
-            return 0;
-        }
+
         try {
             return db.telemetryDao().getUnlockCount(fromMs, toMs);
         } catch (Exception e) {
@@ -66,9 +64,7 @@ public class UsageStatsCollector {
     }
 
     public int getAppSwitchCount(long fromMs, long toMs) {
-        if (!new com.cce.attune.context.SettingsManager(context).isMonitoringEnabled()) {
-            return 0;
-        }
+
         try {
 
             UsageStatsManager usm = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
@@ -114,9 +110,7 @@ public class UsageStatsCollector {
     }
 
     public float getAvgSessionDurationSeconds(long fromMs, long toMs) {
-        if (!new com.cce.attune.context.SettingsManager(context).isMonitoringEnabled()) {
-            return 0f;
-        }
+
         try {
             float avgMs = db.telemetryDao().getAvgSessionDuration(fromMs, toMs);
             return avgMs / 1000f;
@@ -126,9 +120,7 @@ public class UsageStatsCollector {
     }
 
     public long getTotalScreenTimeSeconds(long fromMs, long toMs) {
-        if (!new com.cce.attune.context.SettingsManager(context).isMonitoringEnabled()) {
-            return 0L;
-        }
+
         try {
             UsageStatsManager usm = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
             if (usm == null)
@@ -155,9 +147,7 @@ public class UsageStatsCollector {
     }
 
     public int getSocialAppLaunchCount(long fromMs, long toMs) {
-        if (!new com.cce.attune.context.SettingsManager(context).isMonitoringEnabled()) {
-            return 0;
-        }
+
         try {
             UsageStatsManager usm = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
             if (usm == null)

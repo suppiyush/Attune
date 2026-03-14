@@ -36,9 +36,7 @@ public class FeedbackReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (!new com.cce.attune.context.SettingsManager(context).isMonitoringEnabled()) {
-            return;
-        }
+
         String action = intent.getAction();
         if (action == null) return;
 

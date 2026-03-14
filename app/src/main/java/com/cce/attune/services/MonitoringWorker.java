@@ -31,10 +31,7 @@ public class MonitoringWorker extends Worker {
     @Override
     public Result doWork() {
 
-        if (!new SettingsManager(getApplicationContext()).isMonitoringEnabled()) {
-            Log.d(TAG, "Monitoring disabled in settings, skipping service start");
-            return Result.success();
-        }
+
 
         Log.d(TAG, "Worker checking MonitoringService");
 
@@ -45,11 +42,7 @@ public class MonitoringWorker extends Worker {
 
     public static void startMonitoring(Context context) {
 
-        if (!new SettingsManager(context).isMonitoringEnabled()) {
-            Log.d(TAG, "Monitoring disabled in settings, will not schedule watchdog");
-            WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME);
-            return;
-        }
+
 
         PeriodicWorkRequest request =
                 new PeriodicWorkRequest.Builder(

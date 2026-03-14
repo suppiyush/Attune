@@ -18,6 +18,7 @@ import com.cce.attune.features.FeatureEngine;
 import com.cce.attune.features.PhubbingFeatures;
 import com.cce.attune.risk.PhubbingClassifier;
 import com.cce.attune.risk.RiskEngine;
+import com.cce.attune.risk.RiskEngine;
 import com.cce.attune.risk.StrictnessManager;
 import com.cce.attune.telemetry.UsageStatsCollector;
 import com.github.mikephil.charting.charts.LineChart;
@@ -266,6 +267,8 @@ public class DashboardFragment extends Fragment {
 
         List<Entry> socialEntries   = new ArrayList<>();
         List<Entry> baselineEntries = new ArrayList<>();
+        
+        com.cce.attune.database.AppDatabase db = com.cce.attune.database.AppDatabase.getInstance(requireContext());
 
         switch (currentPeriod) {
 
@@ -274,10 +277,12 @@ public class DashboardFragment extends Fragment {
                 for (int i = 0; i < 7; i++) {
                     long to   = now - (6 - i) * 86_400_000L;
                     long from = to  - 86_400_000L;
-                    PhubbingFeatures features = featureEngine.extractFeaturesForPeriod(from, to);
-                    float risk = riskEngine.computeRisk(features, 0.5f) * 100f;
+                    
+                    Float riskAvg = db.riskRecordDao().getAvgRiskInRange(from, to);
+                    float risk = riskAvg != null ? riskAvg * 100f : 0f;
+                    
                     socialEntries.add(new Entry(i, risk));
-                    baselineEntries.add(new Entry(i, new StrictnessManager(requireContext()).getThreshold() * 100f));
+                    baselineEntries.add(new Entry(i, new StrictnessManager(requireContext()).getThreshold(new RiskEngine(requireContext())) * 100f));
                 }
                 break;
 
@@ -287,10 +292,12 @@ public class DashboardFragment extends Fragment {
                     long weekMs = 7 * 86_400_000L;
                     long to     = now - (3 - i) * weekMs;
                     long from   = to  - weekMs;
-                    PhubbingFeatures features = featureEngine.extractFeaturesForPeriod(from, to);
-                    float risk = riskEngine.computeRisk(features, 0.5f) * 100f;
+                    
+                    Float riskAvg = db.riskRecordDao().getAvgRiskInRange(from, to);
+                    float risk = riskAvg != null ? riskAvg * 100f : 0f;
+                    
                     socialEntries.add(new Entry(i, risk));
-                    baselineEntries.add(new Entry(i, new StrictnessManager(requireContext()).getThreshold() * 100f));
+                    baselineEntries.add(new Entry(i, new StrictnessManager(requireContext()).getThreshold(new RiskEngine(requireContext())) * 100f));
                 }
                 break;
 
@@ -299,10 +306,12 @@ public class DashboardFragment extends Fragment {
                 for (int i = 0; i < 5; i++) {
                     long to   = now - (4 - i) * 3_600_000L;
                     long from = to  - 3_600_000L;
-                    PhubbingFeatures features = featureEngine.extractFeaturesForPeriod(from, to);
-                    float risk = riskEngine.computeRisk(features, 0.5f) * 100f;
+                    
+                    Float riskAvg = db.riskRecordDao().getAvgRiskInRange(from, to);
+                    float risk = riskAvg != null ? riskAvg * 100f : 0f;
+                    
                     socialEntries.add(new Entry(i, risk));
-                    baselineEntries.add(new Entry(i, new StrictnessManager(requireContext()).getThreshold() * 100f));
+                    baselineEntries.add(new Entry(i, new StrictnessManager(requireContext()).getThreshold(new RiskEngine(requireContext())) * 100f));
                 }
                 break;
         }
