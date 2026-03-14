@@ -30,8 +30,8 @@ public class RiskEngine {
     private static final String KEY_BASELINE_SESSION = "baseline_session_sec";
     private static final String KEY_BASELINE_AI      = "baseline_ai_score";
 
-    private static final float DEFAULT_BASELINE_UNLOCK  = 4f;
-    private static final float DEFAULT_BASELINE_SWITCH  = 3f;
+    private static final float DEFAULT_BASELINE_UNLOCK  = 8f;
+    private static final float DEFAULT_BASELINE_SWITCH  = 10f;
     private static final float DEFAULT_BASELINE_SESSION = 60f;
     private static final float DEFAULT_BASELINE_AI      = 0.4f;
 
@@ -42,10 +42,12 @@ public class RiskEngine {
 
     private final SharedPreferences  prefs;
     private final FeatureWeightStore weightStore;
+    private final StrictnessManager  strictnessManager;
 
     public RiskEngine(Context context) {
-        prefs       = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        weightStore = new FeatureWeightStore(context);
+        prefs             = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        weightStore       = new FeatureWeightStore(context);
+        strictnessManager = new StrictnessManager(context);
     }
 
     /**
@@ -77,8 +79,8 @@ public class RiskEngine {
         float wSession = weightStore.getSessionWeight();
 
         float unlockNorm  = clamp(f.unlockRate / 20f, 0f, 1f);
-        float sessionNorm = clamp(1f - (f.avgSessionDurationSeconds / 60f), 0f, 1f);
-        float switchNorm  = clamp(f.switchRate / 15f, 0f, 1f);
+        float sessionNorm = clamp(1f - (f.avgSessionDurationSeconds / 120f), 0f, 1f);
+        float switchNorm  = clamp(f.switchRate / 20f, 0f, 1f);
 
         return wUnlock * unlockNorm + wSwitch * switchNorm + wSession * sessionNorm;
     }
@@ -154,15 +156,39 @@ public class RiskEngine {
         return clamp(risk, 0f, 1f);
     }
 
-    public static String riskLabel(float risk) {
-        if (risk < 0.3f) return "Low";
-        if (risk < 0.6f) return "Medium";
-        return "High";
+    public enum RiskLevel {
+        LOW, MEDIUM, HIGH
+    }
+
+    public RiskLevel getRiskLevel(float risk) {
+        float baseline = getBaselineRisk();
+        float threshold = strictnessManager.getThreshold(this);
+
+        float lower = Math.min(baseline, threshold);
+        float upper = Math.max(baseline, threshold);
+
+        if (risk < lower) return RiskLevel.LOW;
+        if (risk > upper) return RiskLevel.HIGH;
+        return RiskLevel.MEDIUM;
+    }
+
+    public String riskLabel(float risk) {
+        RiskLevel level = getRiskLevel(risk);
+        switch (level) {
+            case LOW:    return "Low";
+            case HIGH:   return "High";
+            case MEDIUM:
+            default:     return "Medium";
+        }
     }
 
     public String explainRisk(float risk) {
-        if (risk < 0.3f) return "Phone usage appears normal.";
-        if (risk < 0.6f) return "Frequent phone checking detected.";
-        return "Strong phubbing behaviour detected.";
+        RiskLevel level = getRiskLevel(risk);
+        switch (level) {
+            case LOW:    return "Phone usage appears normal.";
+            case HIGH:   return "Strong phubbing behaviour detected.";
+            case MEDIUM:
+            default:     return "Frequent phone checking detected.";
+        }
     }
 }

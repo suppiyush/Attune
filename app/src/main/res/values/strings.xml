@@ -63,4 +63,7 @@
     <string name="permission_message">Attune needs Usage Access permission to track app usage. Please enable it in Settings.</string>
     <string name="go_to_settings">Go to Settings</string>
     <string name="version">Version 1.0</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Tap to toggle social interaction · shows risk score</string>
 </resources>

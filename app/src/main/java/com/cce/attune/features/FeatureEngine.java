@@ -10,8 +10,8 @@ import com.cce.attune.telemetry.UsageStatsCollector;
  */
 public class FeatureEngine {
 
-    // Analysis window: last 1 hour
-    private static final long WINDOW_MS = 60 * 60 * 1000L;
+    // Analysis window: last 1/2 hour
+    private static final long WINDOW_MS = 30 * 60 * 1000L;
 
     private final UsageStatsCollector collector;
 
@@ -55,7 +55,7 @@ public class FeatureEngine {
     /** Features over the last N days, combined window. Used for baseline computation. */
     public PhubbingFeatures extractFeaturesForPeriod(long fromMs, long toMs) {
         PhubbingFeatures features = new PhubbingFeatures();
-        float periodHours = (toMs - fromMs) / 3_600_000f;
+        float periodHours = (toMs - fromMs) / 1_800_000f;
 
         int unlocks = collector.getUnlockCount(fromMs, toMs);
         features.unlockRate = (periodHours > 0) ? (unlocks / periodHours) : 0;

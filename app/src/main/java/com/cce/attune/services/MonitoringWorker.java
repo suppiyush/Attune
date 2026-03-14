@@ -30,9 +30,6 @@ public class MonitoringWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
-
-
-
         Log.d(TAG, "Worker checking MonitoringService");
 
         MonitoringService.startService(getApplicationContext());
@@ -41,9 +38,6 @@ public class MonitoringWorker extends Worker {
     }
 
     public static void startMonitoring(Context context) {
-
-
-
         PeriodicWorkRequest request =
                 new PeriodicWorkRequest.Builder(
                         MonitoringWorker.class,

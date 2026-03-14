@@ -39,7 +39,7 @@ android {
     }
 
     aaptOptions {
-        noCompress += "tflite"
+        noCompress += "onnx"
     }
 }
 
@@ -71,7 +71,7 @@ dependencies {
 
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
-    implementation("org.tensorflow:tensorflow-lite:2.5.0")
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.24.3")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

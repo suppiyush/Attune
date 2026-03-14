@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Slider toggle track — OFF state: grey track with white thumb on the left -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Track -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#E5E5EA" />
+            <corners android:radius="15dp" />
+            <size android:width="50dp" android:height="28dp" />
+        </shape>
+    </item>
+    <!-- Thumb (left) -->
+    <item
+        android:left="2dp"
+        android:top="2dp"
+        android:right="24dp"
+        android:bottom="2dp">
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFF" />
+            <size android:width="24dp" android:height="24dp" />
+        </shape>
+    </item>
+</layer-list>

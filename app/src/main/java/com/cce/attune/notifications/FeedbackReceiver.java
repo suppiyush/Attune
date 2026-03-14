@@ -10,6 +10,7 @@ import com.cce.attune.database.AppDatabase;
 import com.cce.attune.database.FeedbackEvent;
 import com.cce.attune.features.PhubbingFeatures;
 import com.cce.attune.risk.FeatureWeightStore;
+import com.cce.attune.risk.RiskEngine;
 
 /**
  * Receives Yes/No survey responses from phubbing alert notification action buttons.
@@ -61,8 +62,9 @@ public class FeedbackReceiver extends BroadcastReceiver {
             }
         }
 
-        // Adapt feature weights
-        new FeatureWeightStore(context).applyFeedback(wasCorrect, f);
+        // Adapt feature weights using current user baseline
+        RiskEngine riskEngine = new RiskEngine(context);
+        new FeatureWeightStore(context).applyFeedback(wasCorrect, f, riskEngine);
 
         Log.d(TAG, "Feedback received: " + (wasCorrect ? "YES (correct)" : "NO (false alarm)"));
 

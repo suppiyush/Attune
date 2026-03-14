@@ -87,5 +87,22 @@
             </intent-filter>
         </receiver>
 
+        <!-- Home screen widget: Social Interaction toggle + risk score -->
+        <receiver
+            android:name=".widget.SocialWidgetProvider"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+                <action android:name="com.cce.attune.WIDGET_UPDATE"/>
+                <action android:name="com.cce.attune.ACTION_TOGGLE_SOCIAL"/>
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_social_info"/>
+
+        </receiver>
+
     </application>
-</manifest>
+</manifest>

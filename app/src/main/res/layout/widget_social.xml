@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Attune Social Widget — compact horizontal layout
+  Left: risk score   Right: slider toggle + label
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:background="@drawable/widget_background"
+    android:gravity="center_vertical">
+
+    <!-- Left: Branding + risk score -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="start">
+
+        <!-- Brand -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="4dp">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@mipmap/ic_launcher_round"
+                android:contentDescription="Attune" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Attune"
+                android:textColor="#FF6A2E"
+                android:textSize="10sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <!-- Risk value -->
+        <TextView
+            android:id="@+id/widget_risk_score"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textColor="#1C1C1E"
+            android:textSize="30sp"
+            android:textStyle="bold"
+            android:includeFontPadding="false"/>
+
+        <TextView
+            android:id="@+id/widget_risk_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="RISK SCORE"
+            android:textColor="#6E6E73"
+            android:textSize="8sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.06"
+            android:layout_marginTop="1dp"/>
+    </LinearLayout>
+
+    <!-- Right: Toggle area (clickable) -->
+    <LinearLayout
+        android:id="@+id/widget_toggle_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingStart="12dp"
+        android:paddingEnd="4dp">
+
+        <!-- Slider toggle image -->
+        <ImageView
+            android:id="@+id/widget_toggle_track"
+            android:layout_width="50dp"
+            android:layout_height="28dp"
+            android:src="@drawable/widget_toggle_off"
+            android:scaleType="fitXY"
+            android:contentDescription="Toggle social interaction"/>
+
+        <!-- Label -->
+        <TextView
+            android:id="@+id/widget_toggle_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Not Social"
+            android:textColor="#6E6E73"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:layout_marginTop="3dp"/>
+    </LinearLayout>
+</LinearLayout>

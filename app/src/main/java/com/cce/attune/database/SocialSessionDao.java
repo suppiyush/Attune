@@ -11,7 +11,7 @@ import java.util.List;
 public interface SocialSessionDao {
 
     @Insert
-    void insert(SocialSession session);
+    long insert(SocialSession session);
 
     @Delete
     void delete(SocialSession session);

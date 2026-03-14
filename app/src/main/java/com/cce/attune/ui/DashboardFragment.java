@@ -136,8 +136,9 @@ public class DashboardFragment extends Fragment {
         // Compute hybrid risk
         float risk = riskEngine.computeRisk(features, aiScore);
 
-        // Detect social context
-        boolean inSocial = contextManager.isSocialWindowActive(now);
+        // Detect social context (schedule, BT, or manual widget toggle)
+        boolean inSocial = contextManager.isSocialWindowActive(now)
+                || new com.cce.attune.context.SettingsManager(requireContext()).isManualSocialActive();
 
         // Update baseline only once per hour
         if (!inSocial && now - lastBaselineUpdate > 3_600_000L) {
@@ -149,16 +150,23 @@ public class DashboardFragment extends Fragment {
         int riskPct = Math.round(risk * 100);
 
         binding.tvRiskScore.setText(riskPct + "%");
-        binding.tvRiskLabel.setText(RiskEngine.riskLabel(risk));
+        binding.tvRiskLabel.setText(riskEngine.riskLabel(risk));
 
         int riskColor;
+        RiskEngine.RiskLevel level = riskEngine.getRiskLevel(risk);
 
-        if (risk < 0.3f)
-            riskColor = requireContext().getColor(R.color.risk_low);
-        else if (risk < 0.6f)
-            riskColor = requireContext().getColor(R.color.risk_medium);
-        else
-            riskColor = requireContext().getColor(R.color.risk_high);
+        switch (level) {
+            case LOW:
+                riskColor = requireContext().getColor(R.color.risk_low);
+                break;
+            case HIGH:
+                riskColor = requireContext().getColor(R.color.risk_high);
+                break;
+            case MEDIUM:
+            default:
+                riskColor = requireContext().getColor(R.color.risk_medium);
+                break;
+        }
 
         binding.tvRiskScore.setTextColor(riskColor);
         binding.tvRiskLabel.setTextColor(riskColor);

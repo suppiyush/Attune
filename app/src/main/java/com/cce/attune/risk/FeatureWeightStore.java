@@ -48,14 +48,16 @@ public class FeatureWeightStore {
      *
      * @param wasCorrect true if user confirmed phubbing was happening; false if false alarm
      * @param f          the features at the time of the alert
+     * @param engine     the RiskEngine to retrieve the current user baseline
      */
-    public void applyFeedback(boolean wasCorrect, PhubbingFeatures f) {
+    public void applyFeedback(boolean wasCorrect, PhubbingFeatures f, RiskEngine engine) {
         float sign = wasCorrect ? +LEARNING_RATE : -LEARNING_RATE;
 
-        // Determine which features were "elevated" (above simple thresholds)
-        boolean unlockElevated  = f.unlockRate > 6f;
-        boolean switchElevated  = f.switchRate > 5f;
-        boolean sessionElevated = f.avgSessionDurationSeconds < 45f; // short sessions → elevated
+        // Determine which features were "elevated" based on the user's current baseline
+        boolean unlockElevated  = f.unlockRate > engine.getBaselineUnlockRate();
+        boolean switchElevated  = f.switchRate > engine.getBaselineSwitchRate();
+        // For session duration, shorter than baseline is "elevated" risk
+        boolean sessionElevated = f.avgSessionDurationSeconds < engine.getBaselineSessionDuration();
 
         float wUnlock  = getUnlockWeight()  + (unlockElevated  ? sign : 0f);
         float wSwitch  = getSwitchWeight()  + (switchElevated  ? sign : 0f);
@@ -68,9 +70,11 @@ public class FeatureWeightStore {
 
         // Renormalize
         float total = wUnlock + wSwitch + wSession;
-        wUnlock  /= total;
-        wSwitch  /= total;
-        wSession /= total;
+        if (total > 0) {
+            wUnlock  /= total;
+            wSwitch  /= total;
+            wSession /= total;
+        }
 
         prefs.edit()
                 .putFloat(KEY_W_UNLOCK,  wUnlock)
@@ -78,7 +82,7 @@ public class FeatureWeightStore {
                 .putFloat(KEY_W_SESSION, wSession)
                 .apply();
 
-        Log.d(TAG, String.format("Weights updated (%s) → unlock=%.3f switch=%.3f session=%.3f",
+        Log.d(TAG, String.format("Weights updated (%s) using baseline thresholds → unlock=%.3f switch=%.3f session=%.3f",
                 wasCorrect ? "correct" : "false alarm", wUnlock, wSwitch, wSession));
     }
 

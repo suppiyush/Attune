@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Selector for the toggle button: orange when "in social", muted grey when off -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Active state (tag used programmatically) -->
+    <item android:state_activated="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#FF6A2E" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+
+    <!-- Default / inactive -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#E5E5EA" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+
+</selector>

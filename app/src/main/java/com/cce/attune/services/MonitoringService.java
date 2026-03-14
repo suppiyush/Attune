@@ -33,6 +33,11 @@ import com.cce.attune.ui.MainActivity;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Date;
+import java.util.Calendar;
+import java.util.Locale;
+import java.text.SimpleDateFormat;
+import java.text.DateFormat;
 
 public class MonitoringService extends Service {
 
@@ -45,8 +50,8 @@ public class MonitoringService extends Service {
     private static final String KEY_RISK_COUNT = "risk_count";
     private static final String KEY_SESSIONS_COUNT = "sessions_count";
 
-    private static final long BT_SCAN_INTERVAL_MS = 60 * 1000L;
-    private static final long CHECK_INTERVAL_MS = 1 * 60 * 1000L;
+    private static final long BT_SCAN_INTERVAL_MS = 30 * 1000L;
+    private static final long CHECK_INTERVAL_MS = 60 * 1000L;
 
     private UnlockReceiver unlockReceiver;
     private BroadcastReceiver btDiscoveryReceiver;
@@ -85,21 +90,18 @@ public class MonitoringService extends Service {
     };
 
     private void runPhubbingCheck() {
-        if (!new SettingsManager(this).isPhubbingAlertsEnabled()) {
-            Log.d(TAG, "Phubbing alerts disabled in settings; skipping check");
-            return;
-        }
-
         try {
-
             SocialContextManager cm = new SocialContextManager(this);
+            SettingsManager settings = new SettingsManager(this);
 
-            boolean inSocialContext =
-                    isScheduleActive
-                            || cm.isBluetoothGroupActive(this);
+            boolean isBluetoothSocialActive = settings.isBluetoothSocialDetectionEnabled()
+                                                && cm.isBluetoothGroupActive(this);
+            boolean isManualSocialActive    = settings.isManualSocialActive();
+            boolean inSocialContext = isScheduleActive || isBluetoothSocialActive || isManualSocialActive;
 
-            Log.d(TAG, "Phubbing check — social context: " + inSocialContext);
-            Log.d(TAG, "Schedule Active: " + isScheduleActive);
+            Log.d(TAG, "Social check - Schedule: " + isScheduleActive
+                    + " | Bluetooth: " + isBluetoothSocialActive
+                    + " | Manual: " + isManualSocialActive);
 
 
             FeatureEngine featureEngine = new FeatureEngine(this);
@@ -113,13 +115,16 @@ public class MonitoringService extends Service {
             Log.d(TAG,"features"+features);
 
             RiskEngine riskEngine = new RiskEngine(this);
-
             float risk = riskEngine.computeRisk(features, aiScore);
-            
-            // Save this calculated risk score to the database
+
+            // Persist risk score to the database
             com.cce.attune.database.AppDatabase.getInstance(this)
                     .riskRecordDao()
                     .insert(new com.cce.attune.database.RiskRecord(System.currentTimeMillis(), risk));
+
+            // Cache risk score for the widget and broadcast an update so it refreshes
+            settings.setLastRiskScore(risk);
+            sendWidgetUpdate(risk);
 
             riskEngine.updateBaseline(features);
 
@@ -127,25 +132,31 @@ public class MonitoringService extends Service {
                     new StrictnessManager(this).getThreshold(riskEngine);
 
             updateDailyMetrics(risk, inSocialContext);
-            updateStreakStatus(risk, threshold);
-            awardDailyXp(inSocialContext);
+            updateStreakStatus();
 
             if (inSocialContext && risk >= threshold) {
+                boolean shouldAlert = false;
+                if (isScheduleActive) {
+                    shouldAlert = true; // Schedule always alerts if risk high
+                } else if (isBluetoothSocialActive && settings.isBluetoothSocialDetectionEnabled()) {
+                    shouldAlert = true; // Bluetooth alerts only if toggle ON
+                } else if (isManualSocialActive) {
+                    shouldAlert = true; // Manual widget toggle always alerts if risk high
+                }
 
-                NotificationService.sendPhubbingAlert(
-                        this,
-                        risk,
-                        features
-                );
-
-                Log.d(TAG, "Alert sent");
-
+                if (shouldAlert && settings.isPhubbingAlertsEnabled()) {
+                    NotificationService.sendPhubbingAlert(
+                            this,
+                            risk,
+                            features
+                    );
+                    Log.d(TAG, "Alert sent");
+                } else {
+                    Log.d(TAG, "Risk high but alert suppressed (shouldAlert=" + shouldAlert + ", allNotifs=" + settings.isPhubbingAlertsEnabled() + ")");
+                }
             }
-
         } catch (Exception e) {
-
             Log.e(TAG, "Phubbing check failed", e);
-
         }
     }
 
@@ -425,26 +436,28 @@ public class MonitoringService extends Service {
 
         SharedPreferences prefs = getSharedPreferences(SUMMARY_PREFS, MODE_PRIVATE);
         String savedDate = prefs.getString(KEY_TODAY_DATE, "");
-        String currentDate = java.text.DateFormat.getDateInstance().format(new java.util.Date());
+        String currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date());
 
         SharedPreferences.Editor editor = prefs.edit();
 
-        if (!currentDate.equals(savedDate)) {
-            // New day, reset everything
+        if (!"".equals(savedDate) && !currentDate.equals(savedDate)) {
+            // New day detected! Finalize yesterday's XP before resetting.
+            finalizeDay(savedDate);
+
             editor.putString(KEY_TODAY_DATE, currentDate);
             editor.putFloat(KEY_RISK_SUM, currentRisk);
             editor.putInt(KEY_RISK_COUNT, 1);
             editor.putInt(KEY_SESSIONS_COUNT, inSocial ? 1 : 0);
         } else {
-            // Same day, accumulate
+            if ("".equals(savedDate)) {
+                editor.putString(KEY_TODAY_DATE, currentDate);
+            }
             float sum = prefs.getFloat(KEY_RISK_SUM, 0f) + currentRisk;
             int count = prefs.getInt(KEY_RISK_COUNT, 0) + 1;
             editor.putFloat(KEY_RISK_SUM, sum);
             editor.putInt(KEY_RISK_COUNT, count);
             
             if (inSocial) {
-                // Simplified: Increment sessions count if we detect social context during this check
-                // In a more robust system, we would track session start/end
                 int sessions = prefs.getInt(KEY_SESSIONS_COUNT, 0) + 1;
                 editor.putInt(KEY_SESSIONS_COUNT, sessions);
             }
@@ -452,55 +465,71 @@ public class MonitoringService extends Service {
         editor.apply();
     }
 
-    private void updateStreakStatus(float risk, float threshold) {
+    private void finalizeDay(String date) {
+        try {
+            SharedPreferences summaryPrefs = getSharedPreferences(SUMMARY_PREFS, MODE_PRIVATE);
+            float riskSum   = summaryPrefs.getFloat(KEY_RISK_SUM, 0f);
+            int   riskCount = summaryPrefs.getInt(KEY_RISK_COUNT, 0);
+            float avgRisk   = riskCount > 0 ? (riskSum / riskCount) : 1f;
+            int   sessions  = summaryPrefs.getInt(KEY_SESSIONS_COUNT, 0);
+
+            com.cce.attune.database.AppDatabase db = com.cce.attune.database.AppDatabase.getInstance(this);
+            com.cce.attune.database.DailyStreak streak = db.dailyStreakDao().getStreakForDate(date);
+            boolean cleanDay = streak != null && streak.status == 1;
+
+            // Fetch unlocks for that specific day
+            java.util.Date d = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).parse(date);
+            long start = d.getTime();
+            long end = start + 86400000L;
+
+            com.cce.attune.telemetry.UsageStatsCollector collector = new com.cce.attune.telemetry.UsageStatsCollector(this);
+            int unlocks = collector.getUnlockCount(start, end);
+
+            new com.cce.attune.gamification.XpManager(this)
+                    .awardDailyXp(date, cleanDay, avgRisk, unlocks, sessions > 0);
+                    
+            Log.d(TAG, "Finalized XP award for: " + date + " | clean=" + cleanDay + " | avgRisk=" + avgRisk);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to finalize day: " + date, e);
+        }
+    }
+
+    private void updateStreakStatus() {
+        SharedPreferences summaryPrefs = getSharedPreferences(SUMMARY_PREFS, MODE_PRIVATE);
+        float riskSum   = summaryPrefs.getFloat(KEY_RISK_SUM, 0f);
+        int   riskCount = summaryPrefs.getInt(KEY_RISK_COUNT, 0);
+        float avgRisk   = riskCount > 0 ? (riskSum / riskCount) : 0f;
 
         String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date());
         com.cce.attune.database.AppDatabase db = com.cce.attune.database.AppDatabase.getInstance(this);
         com.cce.attune.database.DailyStreak existing = db.dailyStreakDao().getStreakForDate(today);
 
+        // Streak breaks if daily average risk >= 50%
+        boolean isBroken = avgRisk >= 0.5f;
+
         if (existing == null) {
             // First check of the day
-            int initialStatus = (risk >= threshold) ? 2 : 1;
+            int initialStatus = isBroken ? 2 : 1;
             db.dailyStreakDao().insertOrUpdate(new com.cce.attune.database.DailyStreak(today, initialStatus));
-        } else if (existing.status == 1 && risk >= threshold) {
-            // Found phubbing, break the "clean" streak for today
+        } else if (existing.status == 1 && isBroken) {
+            // Average risk crossed 50%, break the streak for today
             db.dailyStreakDao().updateStatus(today, 2);
         }
     }
 
-    private void awardDailyXp(boolean inSocialContext) {
-        try {
-            String today = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date());
-
-            com.cce.attune.database.AppDatabase db = com.cce.attune.database.AppDatabase.getInstance(this);
-            com.cce.attune.database.DailyStreak streak = db.dailyStreakDao().getStreakForDate(today);
-            boolean cleanDay = streak != null && streak.status == 1;
-
-            // Average risk for today
-            SharedPreferences summaryPrefs = getSharedPreferences(SUMMARY_PREFS, MODE_PRIVATE);
-            float riskSum   = summaryPrefs.getFloat(KEY_RISK_SUM, 0f);
-            int   riskCount = summaryPrefs.getInt(KEY_RISK_COUNT, 0);
-            float avgRisk   = riskCount > 0 ? (riskSum / riskCount) : 1f;
-
-            // Unlock count for today
-            com.cce.attune.telemetry.UsageStatsCollector collector = new com.cce.attune.telemetry.UsageStatsCollector(this);
-            java.util.Calendar cal = java.util.Calendar.getInstance();
-            cal.set(java.util.Calendar.HOUR_OF_DAY, 0);
-            cal.set(java.util.Calendar.MINUTE, 0);
-            cal.set(java.util.Calendar.SECOND, 0);
-            int unlocks = collector.getUnlockCount(cal.getTimeInMillis(), System.currentTimeMillis());
-
-            new com.cce.attune.gamification.XpManager(this)
-                    .awardDailyXp(today, cleanDay, avgRisk, unlocks, inSocialContext);
-        } catch (Exception e) {
-            Log.e(TAG, "XP award failed", e);
-        }
-    }
 
     public static void startService(Context context) {
-
         context.startForegroundService(
                 new Intent(context, MonitoringService.class)
         );
+    }
+
+    /** Notifies the home screen widget with the latest risk score. */
+    private void sendWidgetUpdate(float risk) {
+        Intent intent = new Intent(com.cce.attune.widget.SocialWidgetProvider.ACTION_WIDGET_UPDATE);
+        intent.setComponent(new android.content.ComponentName(
+                this, com.cce.attune.widget.SocialWidgetProvider.class));
+        intent.putExtra("risk_score", risk);
+        sendBroadcast(intent);
     }
 }

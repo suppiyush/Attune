@@ -55,9 +55,11 @@ public class SocialContextManager {
 
     public List<SocialSession> getAllSessions()          { return sessionDao.getAllSessions(); }
     public void addSession(SocialSession session) {
-        sessionDao.insert(session);
-        // Refresh alarms
-        ScheduleAlarmManager.rescheduleAllAlarms(context);
+        long id = sessionDao.insert(session);
+        session.id = (int) id;
+        
+        // Targetted scheduling
+        ScheduleAlarmManager.scheduleSessionAlarms(context, session);
         com.cce.attune.services.MonitoringService.startService(context);
     }
 
