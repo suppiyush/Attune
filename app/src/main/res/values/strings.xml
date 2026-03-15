@@ -54,7 +54,7 @@
     <string name="picker_title">Add Devices to Group</string>
     <string name="picker_hint">Device name (e.g. John&#8217;s Phone)</string>
     <string name="about_title">About Attune</string>
-    <string name="about_text">A behavioral awareness app to help you stay present during social interactions. All data stays on your device.</string>
+    <string name="about_text">A behavioral awareness app to help you stay present during social interactions. Attune includes a home screen widget to view your phubbing risk score and quickly start a social interaction session. All data stays on your device.</string>
     <string name="news_title">Research &amp; Articles</string>
     <string name="news_item_1">Are you familiar with \'phubbing\' and its detrimental effects on your relationships? This act of ignoring someone in favor of your cell phone is more than just bad manners; it undermines mental health and personal connections.</string>
     <string name="news_item_2">Phubbing, a blend of the words \"phone\" and \"snubbing,\" refers to the social behavior where individuals ignore those around them to focus on their smartphones. Research indicates that phubbing can lead to dissatisfaction, distrust, and resentment among partners.</string>
