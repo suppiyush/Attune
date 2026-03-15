@@ -328,7 +328,7 @@ public class ProfileFragment extends Fragment {
         
         // Date check for UI as well
         String savedDate = prefs.getString("today_date", "");
-        String currentDate = java.text.DateFormat.getDateInstance().format(new java.util.Date());
+        String currentDate = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date());
         
         if (!currentDate.equals(savedDate)) {
             binding.tvProfileSessions.setText("0");
