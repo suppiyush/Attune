@@ -96,13 +96,26 @@ public class ProfileFragment extends Fragment {
 
     private void setupToggles() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(requireContext());
+        com.cce.attune.context.SettingsManager settings = new com.cce.attune.context.SettingsManager(requireContext());
 
         isUpdatingSwitch = true;
         binding.switchNotifications.setChecked(prefs.getBoolean(PREF_NOTIFICATIONS, true));
         binding.switchBluetooth.setChecked(prefs.getBoolean(PREF_BLUETOOTH, true));
+        binding.switchSocialMode.setChecked(settings.isManualSocialActive());
         isUpdatingSwitch = false;
 
-
+        binding.switchSocialMode.setOnCheckedChangeListener((btn, checked) -> {
+            if (isUpdatingSwitch) return;
+            settings.setManualSocialActive(checked);
+            
+            // Poke MonitoringService so it picks up the change immediately
+            com.cce.attune.services.MonitoringService.startService(requireContext());
+            
+            // Send broadcast to update the widget UI
+            android.content.Intent widgetIntent = new android.content.Intent(requireContext(), com.cce.attune.widget.SocialWidgetProvider.class);
+            widgetIntent.setAction(com.cce.attune.widget.SocialWidgetProvider.ACTION_WIDGET_UPDATE);
+            requireContext().sendBroadcast(widgetIntent);
+        });
 
         binding.switchNotifications.setOnCheckedChangeListener((btn, checked) -> {
             if (isUpdatingSwitch) return;
@@ -299,6 +312,7 @@ public class ProfileFragment extends Fragment {
             isUpdatingSwitch = true;
             binding.switchNotifications.setChecked(prefs.getBoolean(PREF_NOTIFICATIONS, true));
             binding.switchBluetooth.setChecked(prefs.getBoolean(PREF_BLUETOOTH, true));
+            binding.switchSocialMode.setChecked(new com.cce.attune.context.SettingsManager(requireContext()).isManualSocialActive());
             isUpdatingSwitch = false;
 
             refreshSummaryData();

@@ -29,18 +29,18 @@
             android:layout_marginBottom="4dp">
 
             <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:src="@mipmap/ic_launcher_round"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:src="@drawable/app_logo"
                 android:contentDescription="Attune" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
+                android:layout_marginStart="6dp"
                 android:text="Attune"
                 android:textColor="#FF6A2E"
-                android:textSize="10sp"
+                android:textSize="12sp"
                 android:textStyle="bold"/>
         </LinearLayout>
 

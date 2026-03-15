@@ -5,6 +5,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -59,9 +60,24 @@ public class SsidGroupAdapter extends RecyclerView.Adapter<SsidGroupAdapter.View
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         SsidGroup group = groups.get(position);
-        holder.tvName.setText("📶 " + group.name);
+        holder.tvName.setText(group.name);
 
         List<SsidGroupMember> members = membersMap.getOrDefault(group.id, new ArrayList<>());
+
+        boolean isExpanded = expandedGroups.contains(group.id);
+        holder.membersContainer.setVisibility(isExpanded ? View.VISIBLE : View.GONE);
+        holder.ivExpand.setRotation(isExpanded ? 180f : 0f);
+
+        View.OnClickListener toggleListener = v -> {
+            if (isExpanded) {
+                expandedGroups.remove(group.id);
+            } else {
+                expandedGroups.add(group.id);
+            }
+            notifyItemChanged(position);
+        };
+        holder.tvName.setOnClickListener(toggleListener);
+        holder.ivExpand.setOnClickListener(toggleListener);
 
         // Set up inner adapter for member devices
         MemberAdapter memberAdapter = new MemberAdapter(members, listener::onDeleteMember);
@@ -75,8 +91,12 @@ public class SsidGroupAdapter extends RecyclerView.Adapter<SsidGroupAdapter.View
     @Override
     public int getItemCount() { return groups.size(); }
 
+    private final java.util.Set<Integer> expandedGroups = new java.util.HashSet<>();
+
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvName;
+        ImageView ivExpand;
+        View membersContainer;
         RecyclerView rvMembers;
         ImageButton btnDelete;
         Button btnAddDevices;
@@ -84,6 +104,8 @@ public class SsidGroupAdapter extends RecyclerView.Adapter<SsidGroupAdapter.View
         ViewHolder(View v) {
             super(v);
             tvName       = v.findViewById(R.id.tv_group_name);
+            ivExpand     = v.findViewById(R.id.iv_expand);
+            membersContainer = v.findViewById(R.id.ll_members_container);
             rvMembers    = v.findViewById(R.id.rv_group_members);
             btnDelete    = v.findViewById(R.id.btn_delete_group);
             btnAddDevices = v.findViewById(R.id.btn_add_devices);
@@ -119,7 +141,7 @@ public class SsidGroupAdapter extends RecyclerView.Adapter<SsidGroupAdapter.View
             String label = (m.deviceName != null && !m.deviceName.isEmpty())
                     ? m.deviceName
                     : m.deviceAddress;
-            holder.tv.setText("🔵 " + label);
+            holder.tv.setText("• " + label);
             holder.tv.setOnLongClickListener(v -> {
                 removeListener.onRemove(m);
                 return true;

@@ -15,16 +15,48 @@
         android:paddingTop="48dp"
         android:paddingBottom="0dp">
 
-        <TextView
+        <!-- Header -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/nav_info"
-            android:textSize="26sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="16dp" />
+            android:background="@drawable/bg_header_gradient"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="18dp"
+            android:layout_marginBottom="16dp">
 
-        <!-- News & Articles -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/nav_info"
+                    android:textSize="26sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Learn about phubbing &amp; the app"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary" />
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="65dp"
+                android:layout_height="65dp"
+                android:layout_marginStart="16dp"
+                android:src="@drawable/app_logo"
+                android:contentDescription="Attune logo" />
+        </LinearLayout>
+
+        <!-- Research & Articles -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -32,61 +64,335 @@
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="10dp" />
 
+        <!-- Article 1 — Resilience Lab -->
         <androidx.cardview.widget.CardView
+            android:id="@+id/card_article_1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            app:cardBackgroundColor="@color/bg_card"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="14dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/logo_cerebral"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="Resilience Lab"
+                    android:clipToOutline="true"
+                    android:background="@drawable/bg_article_image" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/news_source_1"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/accent"
+                        android:layout_marginBottom="3dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/news_item_1"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"
+                        android:maxLines="3"
+                        android:ellipsize="end"
+                        android:lineSpacingExtra="2dp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textSize="20sp"
+                    android:textColor="@color/text_tertiary" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Article 2 — EBSCO -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_article_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            app:cardBackgroundColor="@color/bg_card"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="14dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/logo_ebsco"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="EBSCO"
+                    android:clipToOutline="true"
+                    android:background="@drawable/bg_article_image" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/news_source_2"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/accent"
+                        android:layout_marginBottom="3dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/news_item_2"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"
+                        android:maxLines="3"
+                        android:ellipsize="end"
+                        android:lineSpacingExtra="2dp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textSize="20sp"
+                    android:textColor="@color/text_tertiary" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Article 3 — Frontiers -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_article_3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            app:cardBackgroundColor="@color/bg_card"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="14dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/logo_frontiers"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="Frontiers"
+                    android:clipToOutline="true"
+                    android:background="@drawable/bg_article_image" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/news_source_3"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/accent"
+                        android:layout_marginBottom="3dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/news_item_3"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"
+                        android:maxLines="3"
+                        android:ellipsize="end"
+                        android:lineSpacingExtra="2dp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textSize="20sp"
+                    android:textColor="@color/text_tertiary" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Article 4 — PMC -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_article_4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            app:cardBackgroundColor="@color/bg_card"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="14dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/pmc"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="PMC"
+                    android:clipToOutline="true"
+                    android:background="@drawable/bg_article_image" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/news_source_4"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/accent"
+                        android:layout_marginBottom="3dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/news_item_4"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"
+                        android:maxLines="3"
+                        android:ellipsize="end"
+                        android:lineSpacingExtra="2dp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textSize="20sp"
+                    android:textColor="@color/text_tertiary" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Article 5 — PMC -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card_article_5"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
             app:cardBackgroundColor="@color/bg_card"
             app:cardCornerRadius="16dp"
-            app:cardElevation="0dp">
+            app:cardElevation="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:orientation="horizontal"
+                android:padding="14dp"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/pmc"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="PMC"
+                    android:clipToOutline="true"
+                    android:background="@drawable/bg_article_image" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/news_source_5"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/accent"
+                        android:layout_marginBottom="3dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/news_item_5"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_secondary"
+                        android:maxLines="3"
+                        android:ellipsize="end"
+                        android:lineSpacingExtra="2dp" />
+                </LinearLayout>
 
                 <TextView
-                    android:id="@+id/tv_article_1"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/news_item_1"
-                    android:textSize="13sp"
-                    android:textColor="@color/accent"
-                    android:paddingBottom="10dp"
-                    android:clickable="true"
-                    android:focusable="true"/>
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/divider"/>
-                <TextView
-                    android:id="@+id/tv_article_2"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/news_item_2"
-                    android:textSize="13sp"
-                    android:textColor="@color/accent"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="10dp"
-                    android:clickable="true"
-                    android:focusable="true"/>
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/divider"/>
-                <TextView
-                    android:id="@+id/tv_article_3"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/news_item_3"
-                    android:textSize="13sp"
-                    android:textColor="@color/accent"
-                    android:paddingTop="10dp"
-                    android:clickable="true"
-                    android:focusable="true"/>
+                    android:text="›"
+                    android:textSize="20sp"
+                    android:textColor="@color/text_tertiary" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 

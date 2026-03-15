@@ -109,6 +109,14 @@ public class SocialWidgetProvider extends AppWidgetProvider {
                         | android.app.PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.widget_toggle_btn, pi);
 
+        // ── App launch intent (on the remaining left area) ────────────────────
+        Intent appIntent = new Intent(context, com.cce.attune.ui.MainActivity.class);
+        android.app.PendingIntent appPi = android.app.PendingIntent.getActivity(
+                context, 0, appIntent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT
+                        | android.app.PendingIntent.FLAG_IMMUTABLE);
+        views.setOnClickPendingIntent(R.id.widget_root, appPi);
+
         manager.updateAppWidget(widgetId, views);
     }
 

@@ -33,6 +33,16 @@
                 android:textStyle="bold"
                 android:textColor="@color/text_primary" />
 
+            <ImageView
+                android:id="@+id/iv_expand"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:padding="6dp"
+                android:src="@android:drawable/arrow_down_float"
+                android:contentDescription="Expand/Collapse Group"
+                app:tint="@color/text_secondary"
+                android:background="?attr/selectableItemBackgroundBorderless" />
+
             <ImageButton
                 android:id="@+id/btn_delete_group"
                 android:layout_width="wrap_content"
@@ -40,28 +50,36 @@
                 android:src="@android:drawable/ic_menu_delete"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Delete group"
-                android:tint="@color/text_secondary" />
+                app:tint="@color/text_secondary" />
 
         </LinearLayout>
 
-        <!-- Device member list -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_group_members"
+        <LinearLayout
+            android:id="@+id/ll_members_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:nestedScrollingEnabled="false" />
+            android:orientation="vertical"
+            android:visibility="gone">
+            
+            <!-- Device member list -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_group_members"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false" />
 
-        <!-- Add devices button -->
-        <Button
-            android:id="@+id/btn_add_devices"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="+ Add Devices"
-            android:textSize="12sp"
-            app:strokeColor="@color/primary" />
+            <!-- Add devices button -->
+            <Button
+                android:id="@+id/btn_add_devices"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="+ Add Devices"
+                android:textSize="12sp"
+                app:strokeColor="@color/primary" />
+        </LinearLayout>
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

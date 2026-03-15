@@ -29,12 +29,16 @@ public class InfoFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        binding.tvArticle1.setOnClickListener(v -> openUrl(
-                "https://www.sciencedirect.com/science/article/abs/pii/S0747563218300761"));
-        binding.tvArticle2.setOnClickListener(v -> openUrl(
-                "https://pubmed.ncbi.nlm.nih.gov/26188535/"));
-        binding.tvArticle3.setOnClickListener(v -> openUrl(
-                "https://www.mindful.org/mindful-phone-use/"));
+        binding.cardArticle1.setOnClickListener(v -> openUrl(
+                "https://www.resiliencelab.us/thought-lab/phubbing"));
+        binding.cardArticle2.setOnClickListener(v -> openUrl(
+                "https://www.ebsco.com/research-starters/communication-and-mass-media/phubbing"));
+        binding.cardArticle3.setOnClickListener(v -> openUrl(
+                "https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2025.1561159/full"));
+        binding.cardArticle4.setOnClickListener(v -> openUrl(
+                "https://pmc.ncbi.nlm.nih.gov/articles/PMC9853171/"));
+        binding.cardArticle5.setOnClickListener(v -> openUrl(
+                "https://pmc.ncbi.nlm.nih.gov/articles/PMC5774041/"));
     }
 
     private void openUrl(String url) {
